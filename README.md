@@ -9,9 +9,25 @@ probe modules and reports back a stable feature bitmap. The same detector
 binary runs unchanged under a browser, Node, Wasmtime, or any other host
 willing to supply `validate`.
 
-The design and its motivation (WasmOS build-time specialisation, runtime
-capability negotiation, WasmCM implementation selection) are described in
-the project conversation log.
+## Prior art
+
+The immediate inspiration is
+[GoogleChromeLabs/wasm-feature-detect][gcl], which ships a curated set of
+minimal feature-triggering Wasm modules that each get validated via
+`WebAssembly.validate`. This project starts from the same idea but
+inverts the architecture: the JS side shrinks to a bootstrap that only
+supplies `validate(bytes) -> bool`, and the probe fixtures live inside a
+portable `detector.wasm` alongside the code that runs them. The same
+detector then works unchanged under any host — browser, Node, Wasmtime,
+WasmOS, WAMR — that can implement one function.
+
+That reframing also lets the same feature catalogue serve as a capability
+substrate: build-time specialisation of downstream Wasm-based systems,
+runtime capability negotiation between components, and — via
+`wit/engine.wit` — a component-model interface for hosts that speak WIT
+natively.
+
+[gcl]: https://github.com/GoogleChromeLabs/wasm-feature-detect
 
 ## Architecture
 
@@ -143,7 +159,7 @@ interface in `wit/engine.wit`:
 | `shared-memory`          | `new SharedArrayBuffer(1)` succeeds.                                                              |
 | `streaming-compilation`  | `WebAssembly.compileStreaming` is a function.                                                     |
 | `bigint-integration`     | Instantiate a module exporting an `() -> i64` function; the returned value is `typeof "bigint"`.  |
-| `js-string-builtins`     | `WebAssembly.validate` accepts a module importing from `wasm:js-string` with `builtins:['js-string']`; falls back to a non-throwing `WebAssembly.instantiate` with the same option. |
+| `js-string-builtins`     | `WebAssembly.validate` accepts a module importing from `wasm:js-string` with `builtins:['js-string']`; falls back to `WebAssembly.instantiate` on the same import-bearing module (an engine that silently ignores the option raises `LinkError` on the unresolved import). |
 
 Every probe swallows its own errors — a false return always means "not
 available," never "the probe blew up." `detect(source)` now returns a
@@ -168,3 +184,8 @@ namespaced object:
 
 - **Component-model packaging**: the detector today is a core module. A
   component wrapper against `wit/engine.wit` is a follow-up.
+
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE)
+for the full text.
