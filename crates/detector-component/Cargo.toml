@@ -1,0 +1,21 @@
+[package]
+name        = "wasm-feature-detector-component"
+version     = "0.1.0"
+edition.workspace     = true
+license.workspace     = true
+repository.workspace  = true
+
+# Emit a cdylib so the wasm32-unknown-unknown target produces a raw core
+# wasm. `host-wasmtime --component` (or `wasm-tools component new`) then
+# encodes that core module into a component-model artifact using the WIT
+# metadata that wit-bindgen embeds at compile time.
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen = { version = "0.60", default-features = false, features = ["macros"] }
+
+[build-dependencies]
+wat  = "1.243"
+toml = { version = "0.9", default-features = false, features = ["parse", "serde"] }
+serde = { version = "1", features = ["derive"] }
