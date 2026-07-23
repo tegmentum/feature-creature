@@ -10,13 +10,14 @@
 //            detect(ptr, cap)  -> i32   (bytes written, or -1)
 
 import { FEATURES } from "./features.js";
+import { detectEnvironment } from "./environment.js";
 
 export const WASM_UNSUPPORTED = Symbol("WASM_UNSUPPORTED");
 
 /**
  * @param {BufferSource | Promise<Response> | Response} source
  *   detector.wasm as bytes, a fetch Response, or a Promise resolving to one.
- * @returns {Promise<Record<string, boolean> | typeof WASM_UNSUPPORTED>}
+ * @returns {Promise<{ core: Record<string, boolean>, environment: Record<string, boolean> } | typeof WASM_UNSUPPORTED>}
  */
 export async function detect(source) {
   if (typeof WebAssembly !== "object" || typeof WebAssembly.validate !== "function") {
@@ -34,12 +35,14 @@ export async function detect(source) {
 
   const bitmap = new Uint8Array(memory.buffer, ptr, written);
   const count = feature_count();
-  const result = Object.create(null);
+  const core = Object.create(null);
   for (let i = 0; i < count; i++) {
     const name = FEATURES[i] ?? `feature_${i}`;
-    result[name] = (bitmap[i >> 3] & (1 << (i & 7))) !== 0;
+    core[name] = (bitmap[i >> 3] & (1 << (i & 7))) !== 0;
   }
-  return result;
+
+  const environment = await detectEnvironment();
+  return { core, environment };
 }
 
 async function instantiate(source) {
