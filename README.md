@@ -60,7 +60,8 @@ The detector's ABI:
 | `engine.validate`          | import  | `(ptr: i32, len: i32) -> i32`                 | Host-side `WebAssembly.validate` equivalent.                            |
 
 The `wit/engine.wit` file defines the same host capability as a
-component-model interface for hosts that speak WIT natively.
+component-model interface for hosts that speak WIT natively — see
+[Running as a component](#running-as-a-component).
 
 ## Feature registry
 
@@ -73,11 +74,15 @@ the next free index.
 
 ```
 features.toml                # canonical feature registry
-wit/engine.wit               # component-model host interface
-crates/detector/             # portable detector, wasm32-unknown-unknown
+wit/engine.wit               # component-model host interface + `detector` world
+crates/detector/             # portable detector (core-module ABI, no_std cdylib)
   src/probes/*.wat           # one minimal module per feature
   build.rs                   # compiles WAT probes, emits Rust tables
-crates/host-wasmtime/        # native runner + reference host implementation
+crates/detector-component/   # same probes, packaged for the component model
+  build.rs                   # reuses ../detector/src/probes fixtures
+  src/lib.rs                 # wit-bindgen impl of the `detector` world
+crates/host-wasmtime/        # native runner: core-module by default,
+                             # `--component` for the component variant
 js/                          # ~1 KiB browser/Node bootstrap
   src/features.js            # generated from features.toml (do not edit)
 scripts/gen-features.mjs     # regenerates js/src/features.js from the registry
@@ -182,10 +187,62 @@ namespaced object:
 }
 ```
 
-## What this is not (yet)
+## Running as a component
 
-- **Component-model packaging**: the detector today is a core module. A
-  component wrapper against `wit/engine.wit` is a follow-up.
+The same probe set is also packaged as a WebAssembly component that
+speaks the `detector` world in `wit/engine.wit`. Two crates share the
+one `features.toml`/probes fixtures:
+
+- `crates/detector/` (unchanged) — raw core-module ABI consumed by the
+  JS bootstrap and by `host-wasmtime`'s default mode.
+- `crates/detector-component/` — `wit-bindgen`-generated bindings that
+  emit a raw core wasm carrying wit-bindgen's `component-type` custom
+  section.
+
+Build the component variant with the same `wasm32-unknown-unknown`
+target:
+
+```sh
+cargo build --release -p wasm-feature-detector-component --target wasm32-unknown-unknown
+```
+
+The artifact lands at
+`target/wasm32-unknown-unknown/release/wasm_feature_detector_component.wasm`.
+It's still a core module at this point — the `component-type` custom
+section describes how to wrap it. `host-wasmtime --component` performs
+that wrap in-memory (via the `wit-component` crate) and instantiates
+the resulting component against the world:
+
+```sh
+cargo run --release -p host-wasmtime -- --component
+cargo run --release -p host-wasmtime -- --component --json
+```
+
+Under the hood, `--component`:
+
+1. Reads the file. If its preamble is already the component-model magic,
+   it's used as-is; otherwise `wit_component::ComponentEncoder` wraps it.
+2. Instantiates the component with `wasmtime::component::Linker`,
+   supplying the `wasm-feature-detect:engine/engine@0.1.0` interface
+   whose sole `validate: func(bytes: list<u8>) -> bool` import is
+   backed by `wasmtime::Module::validate`.
+3. Calls the world's `detect-core: func() -> list<u8>` export and
+   decodes the bitmap against `features.toml` — producing the same
+   output as the default (core-module) mode.
+
+To pre-encode the component on disk without host-wasmtime (e.g. for
+downstream WasmOS/WasmCM consumers that only speak the component
+model), install `wasm-tools` and run:
+
+```sh
+cargo install wasm-tools
+wasm-tools component new \
+  target/wasm32-unknown-unknown/release/wasm_feature_detector_component.wasm \
+  -o detector.component.wasm
+```
+
+The resulting `detector.component.wasm` is accepted directly by
+`host-wasmtime --component detector.component.wasm`.
 
 ## License
 

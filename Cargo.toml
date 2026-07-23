@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/detector",
+    "crates/detector-component",
     "crates/host-wasmtime",
 ]
 
