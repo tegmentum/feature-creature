@@ -37,12 +37,6 @@ const JS_STRING_PROBE = new Uint8Array([
   0x00, 0x00,
 ]);
 
-// Minimal well-formed empty module: header only. Used as an inert
-// carrier for the js-string builtins instantiate-fallback.
-const EMPTY_MODULE = new Uint8Array([
-  0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
-]);
-
 function probeSharedMemory() {
   try {
     return typeof SharedArrayBuffer === "function" && new SharedArrayBuffer(1) instanceof SharedArrayBuffer;
@@ -79,8 +73,12 @@ async function probeJsStringBuiltins() {
     // Engines that don't recognise the second argument shape may throw
     // rather than return false. Fall through to the instantiate probe.
   }
+  // The fallback module MUST reference the wasm:js-string namespace so
+  // instantiation only succeeds when the engine actually honours the
+  // `builtins` option. An engine that ignores the option would raise
+  // LinkError because we pass an empty import object.
   try {
-    await WebAssembly.instantiate(EMPTY_MODULE, {}, options);
+    await WebAssembly.instantiate(JS_STRING_PROBE, {}, options);
     return true;
   } catch {
     return false;

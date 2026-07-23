@@ -101,7 +101,8 @@ cargo run --release -p host-wasmtime -- --json
 ```
 
 The document has this shape (feature keys use exactly the names from
-`features.toml`, in `bit`-index order):
+`features.toml`, in `bit`-index order; `host.version` is the resolved
+`wasmtime` crate version read from `Cargo.lock` at build time):
 
 ```json
 {
@@ -109,23 +110,13 @@ The document has this shape (feature keys use exactly the names from
   "namespace": "wasm.core",
   "host": {
     "engine": "wasmtime",
-    "version": "38"
+    "version": "47.0.2"
   },
   "features": {
-    "mutable-globals": true,
-    "saturating-float-to-int": true,
-    "sign-extension": true,
-    "bulk-memory": true,
-    "multi-value": true,
-    "reference-types": true,
     "simd": true,
-    "threads": true,
-    "tail-call": true,
-    "exceptions": true,
-    "memory64": true,
-    "multi-memory": true,
     "gc": true,
-    "relaxed-simd": true
+    "memory64": true,
+    "typed-continuations": false
   }
 }
 ```

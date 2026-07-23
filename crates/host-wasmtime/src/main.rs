@@ -10,10 +10,10 @@ use serde_json::{Map, Value, json};
 use std::{env, fs, path::PathBuf, process::ExitCode};
 use wasmtime::{Caller, Config, Engine, Linker, Module, Store};
 
-/// Wasmtime major version. Pinned in `Cargo.toml` (`wasmtime = "38"`);
-/// there is no `wasmtime::VERSION` constant to source it from at runtime,
-/// so we mirror the pin here. Bump alongside the dependency.
-const WASMTIME_VERSION: &str = "38";
+/// Resolved wasmtime version, read from Cargo.lock at build time by
+/// `build.rs`. Wasmtime doesn't expose a `VERSION` constant to source
+/// this from at runtime.
+const WASMTIME_VERSION: &str = env!("WASMTIME_VERSION");
 
 #[derive(Deserialize)]
 struct Registry {
@@ -67,16 +67,23 @@ fn run() -> Result<()> {
         .wasm_exceptions(true)
         .wasm_extended_const(true)
         .wasm_custom_page_sizes(true)
-        .wasm_wide_arithmetic(true);
-    // `wasm_stack_switching` (typed-continuations) is intentionally omitted:
-    // Wasmtime 38's default compiler (Cranelift) refuses to construct an
-    // engine with the stack-switching feature enabled. The probe still runs
-    // through Module::validate and will simply be reported as unsupported.
+        .wasm_wide_arithmetic(true)
+        .wasm_stack_switching(true);
 
-    let engine = Engine::new(&cfg)?;
+    // If the linked wasmtime + compiler combination can't build an engine
+    // with every proposal on (historically true of `wasm_stack_switching`
+    // under Cranelift), retry with that flag off. Validation still reflects
+    // what the underlying wasmtime crate accepts.
+    let engine = match Engine::new(&cfg) {
+        Ok(e) => e,
+        Err(_) => {
+            cfg.wasm_stack_switching(false);
+            Engine::new(&cfg).map_err(|e| anyhow!("construct wasmtime engine: {e}"))?
+        }
+    };
     let detector_path = detector_path.unwrap_or_else(|| default_detector_path(&workspace_root));
     let module = Module::from_file(&engine, &detector_path)
-        .with_context(|| format!("load {}", detector_path.display()))?;
+        .map_err(|e| anyhow!("load {}: {e}", detector_path.display()))?;
 
     let mut linker: Linker<()> = Linker::new(&engine);
     linker.func_wrap(

@@ -10,7 +10,9 @@ name = "wasm-feature-detect"
 path = "src/main.rs"
 
 [dependencies]
-wasmtime = { version = "38", default-features = false, features = [
+wasmtime = { version = "47", default-features = false, features = [
+    "std",
+    "anyhow",
     "cranelift",
     "runtime",
     "gc",
