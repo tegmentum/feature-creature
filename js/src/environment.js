@@ -37,9 +37,66 @@ const JS_STRING_PROBE = new Uint8Array([
   0x00, 0x00,
 ]);
 
+// (module (func (export "f") (result i32) (i32.const 0)))
+// A trivial, non-suspending export. Enough to prove that
+// `WebAssembly.promising` accepts a real Wasm function and hands back
+// something Promise-shaped when called.
+const NOP_I32_PROBE = new Uint8Array([
+  0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+  // type: () -> (i32)
+  0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f,
+  // funcs: [type 0]
+  0x03, 0x02, 0x01, 0x00,
+  // export: "f" -> func 0
+  0x07, 0x05, 0x01, 0x01, 0x66, 0x00, 0x00,
+  // code: i32.const 0; end
+  0x0a, 0x06, 0x01, 0x04, 0x00, 0x41, 0x00, 0x0b,
+]);
+
 function probeSharedMemory() {
   try {
     return typeof SharedArrayBuffer === "function" && new SharedArrayBuffer(1) instanceof SharedArrayBuffer;
+  } catch {
+    return false;
+  }
+}
+
+// `shared-memory` alone says "the SAB constructor exists," but that is a
+// misleadingly optimistic signal on the web: without cross-origin
+// isolation (COOP+COEP), a SharedArrayBuffer cannot survive a
+// `postMessage` structured clone, which means real Wasm threads still
+// won't work. GoogleChromeLabs/wasm-feature-detect's threads probe uses
+// the same MessageChannel round-trip to make sure. Both conditions must
+// hold: the constructor works AND the resulting SAB is transferable.
+async function probeSharedMemoryTransferable() {
+  if (!probeSharedMemory()) return false;
+  if (typeof MessageChannel !== "function") return false;
+  try {
+    const sab = new SharedArrayBuffer(1);
+    return await new Promise((resolve) => {
+      let settled = false;
+      const done = (value) => {
+        if (settled) return;
+        settled = true;
+        try { port1.close(); } catch { /* already closed */ }
+        try { port2.close(); } catch { /* already closed */ }
+        resolve(value);
+      };
+      const { port1, port2 } = new MessageChannel();
+      port1.onmessage = (ev) => {
+        const data = ev && ev.data;
+        done(data instanceof SharedArrayBuffer && data.byteLength === 1);
+      };
+      port1.onmessageerror = () => done(false);
+      try {
+        // A browser without cross-origin isolation throws DataCloneError
+        // here; a browser (or Node) that supports transfer delivers the
+        // SAB to port1.onmessage.
+        port2.postMessage(sab);
+      } catch {
+        done(false);
+      }
+    });
   } catch {
     return false;
   }
@@ -60,6 +117,31 @@ async function probeBigintIntegration() {
     const f = instance.exports.f;
     if (typeof f !== "function") return false;
     return typeof f() === "bigint";
+  } catch {
+    return false;
+  }
+}
+
+// JS Promise Integration (JSPI). The public surface has churned across
+// origin trials; the shipping shape is `WebAssembly.promising(fn)` which
+// takes a Wasm export and returns a JS function that yields a Promise.
+// Just checking for the constructor isn't enough — some engines expose
+// it stubbed. Live-wrap a trivial export and confirm the wrapper hands
+// back a Promise on call.
+async function probeJspi() {
+  try {
+    if (typeof WebAssembly === "undefined") return false;
+    if (typeof WebAssembly.promising !== "function") return false;
+    const { instance } = await WebAssembly.instantiate(NOP_I32_PROBE, {});
+    const f = instance.exports.f;
+    if (typeof f !== "function") return false;
+    const wrapped = WebAssembly.promising(f);
+    if (typeof wrapped !== "function") return false;
+    const result = wrapped();
+    if (result === null || typeof result !== "object") return false;
+    if (typeof result.then !== "function") return false;
+    await result;
+    return true;
   } catch {
     return false;
   }
@@ -93,16 +175,21 @@ async function probeJsStringBuiltins() {
  * @returns {Promise<Record<string, boolean>>}
  */
 export async function detectEnvironment() {
-  const [sharedMemory, streaming, bigint, jsStrings] = await Promise.all([
-    Promise.resolve().then(probeSharedMemory),
-    Promise.resolve().then(probeStreamingCompilation),
-    probeBigintIntegration(),
-    probeJsStringBuiltins(),
-  ]);
+  const [sharedMemory, sharedMemoryTransferable, streaming, bigint, jsStrings, jspi] =
+    await Promise.all([
+      Promise.resolve().then(probeSharedMemory),
+      probeSharedMemoryTransferable(),
+      Promise.resolve().then(probeStreamingCompilation),
+      probeBigintIntegration(),
+      probeJsStringBuiltins(),
+      probeJspi(),
+    ]);
   const out = Object.create(null);
   out["shared-memory"] = sharedMemory;
+  out["shared-memory-transferable"] = sharedMemoryTransferable;
   out["streaming-compilation"] = streaming;
   out["bigint-integration"] = bigint;
   out["js-string-builtins"] = jsStrings;
+  out["jspi"] = jspi;
   return out;
 }
