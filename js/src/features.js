@@ -16,4 +16,9 @@ export const FEATURES = [
   "multi-memory",
   "gc",
   "relaxed-simd",
+  "extended-const",
+  "custom-page-sizes",
+  "function-references",
+  "wide-arithmetic",
+  "typed-continuations",
 ];
