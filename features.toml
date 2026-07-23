@@ -73,3 +73,28 @@ probe = "gc"
 name  = "relaxed-simd"
 bit   = 13
 probe = "relaxed-simd"
+
+[[feature]]
+name  = "extended-const"
+bit   = 14
+probe = "extended-const"
+
+[[feature]]
+name  = "custom-page-sizes"
+bit   = 15
+probe = "custom-page-sizes"
+
+[[feature]]
+name  = "function-references"
+bit   = 16
+probe = "function-references"
+
+[[feature]]
+name  = "wide-arithmetic"
+bit   = 17
+probe = "wide-arithmetic"
+
+[[feature]]
+name  = "typed-continuations"
+bit   = 18
+probe = "typed-continuations"

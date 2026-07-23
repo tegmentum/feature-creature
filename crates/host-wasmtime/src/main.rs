@@ -49,7 +49,14 @@ fn main() -> Result<()> {
         .wasm_memory64(true)
         .wasm_gc(true)
         .wasm_function_references(true)
-        .wasm_exceptions(true);
+        .wasm_exceptions(true)
+        .wasm_extended_const(true)
+        .wasm_custom_page_sizes(true)
+        .wasm_wide_arithmetic(true);
+    // `wasm_stack_switching` (typed-continuations) is intentionally omitted:
+    // Wasmtime 38's default compiler (Cranelift) refuses to construct an
+    // engine with the stack-switching feature enabled. The probe still runs
+    // through Module::validate and will simply be reported as unsupported.
 
     let engine = Engine::new(&cfg)?;
     let module = Module::from_file(&engine, &detector_path)
