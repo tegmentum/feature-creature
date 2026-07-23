@@ -3,3 +3,4 @@ node_modules/
 Cargo.lock.user
 *.wasm.br
 dist/
+js/test/output/
