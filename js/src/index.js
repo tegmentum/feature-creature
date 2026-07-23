@@ -17,7 +17,17 @@ export const WASM_UNSUPPORTED = Symbol("WASM_UNSUPPORTED");
 /**
  * @param {BufferSource | Promise<Response> | Response} source
  *   detector.wasm as bytes, a fetch Response, or a Promise resolving to one.
- * @returns {Promise<{ core: Record<string, boolean>, environment: Record<string, boolean> } | typeof WASM_UNSUPPORTED>}
+ * @returns {Promise<{
+ *   core: Record<string, boolean>,
+ *   environment: {
+ *     "shared-memory": boolean,
+ *     "shared-memory-transferable": boolean,
+ *     "streaming-compilation": boolean,
+ *     "bigint-integration": boolean,
+ *     "js-string-builtins": boolean,
+ *     "jspi": boolean,
+ *   },
+ * } | typeof WASM_UNSUPPORTED>}
  */
 export async function detect(source) {
   if (typeof WebAssembly !== "object" || typeof WebAssembly.validate !== "function") {

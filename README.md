@@ -154,12 +154,14 @@ Some capabilities live in the host, not the engine, so the portable
 with a small set of JS-side probes that mirror the `environment`
 interface in `wit/engine.wit`:
 
-| probe                    | how it's tested                                                                                   |
-|--------------------------|---------------------------------------------------------------------------------------------------|
-| `shared-memory`          | `new SharedArrayBuffer(1)` succeeds.                                                              |
-| `streaming-compilation`  | `WebAssembly.compileStreaming` is a function.                                                     |
-| `bigint-integration`     | Instantiate a module exporting an `() -> i64` function; the returned value is `typeof "bigint"`.  |
-| `js-string-builtins`     | `WebAssembly.validate` accepts a module importing from `wasm:js-string` with `builtins:['js-string']`; falls back to `WebAssembly.instantiate` on the same import-bearing module (an engine that silently ignores the option raises `LinkError` on the unresolved import). |
+| probe                          | how it's tested                                                                                   |
+|--------------------------------|---------------------------------------------------------------------------------------------------|
+| `shared-memory`                | `new SharedArrayBuffer(1)` succeeds. Necessary but, on the web, not sufficient — see below.       |
+| `shared-memory-transferable`   | `shared-memory` holds AND a `SharedArrayBuffer` survives a `MessageChannel` `postMessage` round-trip. This is the real precondition for Wasm threads on the web: without cross-origin isolation (COOP+COEP) the structured clone throws `DataCloneError` and threads still won't work, mirroring [GoogleChromeLabs/wasm-feature-detect][gcl]'s threads probe. |
+| `streaming-compilation`        | `WebAssembly.compileStreaming` is a function.                                                     |
+| `bigint-integration`           | Instantiate a module exporting an `() -> i64` function; the returned value is `typeof "bigint"`.  |
+| `js-string-builtins`           | `WebAssembly.validate` accepts a module importing from `wasm:js-string` with `builtins:['js-string']`; falls back to `WebAssembly.instantiate` on the same import-bearing module (an engine that silently ignores the option raises `LinkError` on the unresolved import). |
+| `jspi`                         | `WebAssembly.promising` is a function; wrapping a trivial exported Wasm function through it yields a callable that returns a `Promise`.                                                                                                                                                                                                                                              |
 
 Every probe swallows its own errors — a false return always means "not
 available," never "the probe blew up." `detect(source)` now returns a
@@ -173,9 +175,11 @@ namespaced object:
   },
   environment: {  // supplied by js/src/environment.js
     "shared-memory": true,
+    "shared-memory-transferable": true,
     "streaming-compilation": true,
     "bigint-integration": true,
     "js-string-builtins": false,
+    "jspi": false,
   },
 }
 ```

@@ -14,10 +14,20 @@ interface engine {
 /// leave any of these unimplemented; the bootstrap decides whether to
 /// bind them.
 interface environment {
+    /// SharedArrayBuffer constructor is available.
     shared-memory: func() -> bool;
+    /// SharedArrayBuffer additionally survives a postMessage structured
+    /// clone — the real precondition for using Wasm threads under a
+    /// browser without cross-origin isolation, and the guarantee
+    /// GoogleChromeLabs/wasm-feature-detect's threads probe upholds.
+    shared-memory-transferable: func() -> bool;
     bigint-integration: func() -> bool;
     js-string-builtins: func() -> bool;
     streaming-compilation: func() -> bool;
+    /// JavaScript Promise Integration: `WebAssembly.promising` exists
+    /// and, when applied to a Wasm export, produces a JS wrapper whose
+    /// invocation yields a Promise.
+    jspi: func() -> bool;
 }
 
 /// World for a core detector wrapped as a component.
