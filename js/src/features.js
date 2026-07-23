@@ -1,6 +1,6 @@
-// Ordered list of feature names by bit index. Keep in sync with
-// ../../features.toml. The detector writes a little-endian bitmap and this
-// table decodes it back to names.
+// GENERATED FROM features.toml — do not edit. Regenerate: node scripts/gen-features.mjs
+// Ordered list of feature names by bit index. The detector writes a
+// little-endian bitmap and this table decodes it back to names.
 export const FEATURES = [
   "mutable-globals",
   "saturating-float-to-int",

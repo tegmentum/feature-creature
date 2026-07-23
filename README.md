@@ -61,7 +61,14 @@ crates/detector/             # portable detector, wasm32-unknown-unknown
   build.rs                   # compiles WAT probes, emits Rust tables
 crates/host-wasmtime/        # native runner + reference host implementation
 js/                          # ~1 KiB browser/Node bootstrap
+  src/features.js            # generated from features.toml (do not edit)
+scripts/gen-features.mjs     # regenerates js/src/features.js from the registry
 ```
+
+`js/src/features.js` is generated — after editing `features.toml`, run
+`node scripts/gen-features.mjs` (or `npm run gen` from `js/`) to
+regenerate it. The Rust build script picks up registry changes
+automatically via `build.rs`.
 
 ## Building
 
