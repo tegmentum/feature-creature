@@ -48,14 +48,16 @@ natively.
 
 The detector's ABI:
 
-| symbol                     | kind    | signature                          | purpose                                                                 |
-|----------------------------|---------|------------------------------------|-------------------------------------------------------------------------|
-| `memory`                   | export  | —                                  | Standard exported linear memory.                                        |
-| `feature_count`            | export  | `() -> i32`                        | Number of features this build knows about.                              |
-| `result_buffer`            | export  | `() -> i32`                        | Address of a static buffer inside `memory`.                             |
-| `result_capacity`          | export  | `() -> i32`                        | Byte capacity of that buffer.                                           |
-| `detect`                   | export  | `(ptr: i32, cap: i32) -> i32`      | Fills a bitmap at `ptr`; returns bytes written or `-1` on `cap` too small. |
-| `engine.validate`          | import  | `(ptr: i32, len: i32) -> i32`      | Host-side `WebAssembly.validate` equivalent.                            |
+| symbol                     | kind    | signature                                     | purpose                                                                 |
+|----------------------------|---------|-----------------------------------------------|-------------------------------------------------------------------------|
+| `memory`                   | export  | —                                             | Standard exported linear memory.                                        |
+| `feature_count`            | export  | `() -> i32`                                   | Number of features this build knows about.                              |
+| `result_buffer`            | export  | `() -> i32`                                   | Address of a static buffer inside `memory`.                             |
+| `result_capacity`          | export  | `() -> i32`                                   | Byte capacity of that buffer.                                           |
+| `detect`                   | export  | `(ptr: i32, cap: i32) -> i32`                 | Fills a bitmap at `ptr`; returns bytes written or `-1` on `cap` too small. |
+| `feature_bit_index`        | export  | `(name_ptr: i32, name_len: i32) -> i32`       | Linear-scans the built-in name table for the UTF-8 bytes at `name_ptr..+name_len`. Returns the bit index, or `-1` if unknown. Lets a host decode the bitmap by name without ever seeing `features.toml`. |
+| `feature_name`             | export  | `(index: i32, out_ptr: i32, out_cap: i32) -> i32` | Writes the UTF-8 bytes of the name at `index` to `[out_ptr, out_ptr+out_cap)`. Returns bytes written, `-1` if `index` is out of range, or `-2` if `out_cap` is too small. Pairs with `feature_bit_index` so a host with just `detector.wasm` can enumerate feature names. |
+| `engine.validate`          | import  | `(ptr: i32, len: i32) -> i32`                 | Host-side `WebAssembly.validate` equivalent.                            |
 
 The `wit/engine.wit` file defines the same host capability as a
 component-model interface for hosts that speak WIT natively.

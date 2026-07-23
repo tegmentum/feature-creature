@@ -66,6 +66,19 @@ fn main() {
         ));
     }
 
-    code.push_str("];\n");
+    code.push_str("];\n\n");
+
+    // Name-lookup helper for the `feature_bit_index` / `feature_name`
+    // exports in `src/lib.rs`. Feature names are already stored in bit-index
+    // order as the `name` field on each `PROBES` entry — reusing that table
+    // (rather than emitting a parallel `[&str; N]` here) avoids duplicating
+    // ~150 bytes of fat-pointer overhead in the compiled `.wasm`.
+    code.push_str(
+        "#[inline]\n\
+         pub fn name_at(index: usize) -> &'static str {\n    \
+             PROBES[index].name\n\
+         }\n",
+    );
+
     fs::write(out_dir.join("probes.rs"), code).unwrap();
 }
