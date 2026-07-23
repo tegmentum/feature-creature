@@ -1,0 +1,75 @@
+# Single source of truth for feature bit indices.
+#
+# `bit` is stable; never renumber. Add new features at the next free index.
+# `probe` names a WAT file under crates/detector/src/probes/<probe>.wat.
+# The Rust build script and JS bootstrap both consume this file.
+
+[[feature]]
+name  = "mutable-globals"
+bit   = 0
+probe = "mutable-globals"
+
+[[feature]]
+name  = "saturating-float-to-int"
+bit   = 1
+probe = "saturating-float-to-int"
+
+[[feature]]
+name  = "sign-extension"
+bit   = 2
+probe = "sign-extension"
+
+[[feature]]
+name  = "bulk-memory"
+bit   = 3
+probe = "bulk-memory"
+
+[[feature]]
+name  = "multi-value"
+bit   = 4
+probe = "multi-value"
+
+[[feature]]
+name  = "reference-types"
+bit   = 5
+probe = "reference-types"
+
+[[feature]]
+name  = "simd"
+bit   = 6
+probe = "simd"
+
+[[feature]]
+name  = "threads"
+bit   = 7
+probe = "threads"
+
+[[feature]]
+name  = "tail-call"
+bit   = 8
+probe = "tail-call"
+
+[[feature]]
+name  = "exceptions"
+bit   = 9
+probe = "exceptions"
+
+[[feature]]
+name  = "memory64"
+bit   = 10
+probe = "memory64"
+
+[[feature]]
+name  = "multi-memory"
+bit   = 11
+probe = "multi-memory"
+
+[[feature]]
+name  = "gc"
+bit   = 12
+probe = "gc"
+
+[[feature]]
+name  = "relaxed-simd"
+bit   = 13
+probe = "relaxed-simd"

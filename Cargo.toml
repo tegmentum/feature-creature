@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/detector",
+    "crates/host-wasmtime",
+]
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/tegmentum/wasm-feature-detect"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

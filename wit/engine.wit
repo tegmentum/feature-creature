@@ -1,0 +1,29 @@
+package wasm-feature-detect:engine@0.1.0;
+
+/// Host-provided validation primitive. This is the sole capability the
+/// portable detector needs from its environment; everything else it can
+/// answer by constructing minimal probe modules internally.
+interface engine {
+    /// Return true if `bytes` is a valid WebAssembly module under the
+    /// current engine's active feature set.
+    validate: func(bytes: list<u8>) -> bool;
+}
+
+/// Optional environment-level probes the detector cannot answer on its
+/// own (JS/Web APIs, WASI capabilities, etc.). Implementations may
+/// leave any of these unimplemented; the bootstrap decides whether to
+/// bind them.
+interface environment {
+    shared-memory: func() -> bool;
+    bigint-integration: func() -> bool;
+    js-string-builtins: func() -> bool;
+    streaming-compilation: func() -> bool;
+}
+
+/// World for a core detector wrapped as a component.
+world detector {
+    import engine;
+    /// Detect all core-engine features and return a little-endian bitmap
+    /// indexed by the `bit` field in `features.toml`.
+    export detect-core: func() -> list<u8>;
+}
