@@ -47,7 +47,9 @@ fn main() {
         "pub const FEATURE_COUNT: usize = {};\n\n",
         registry.feature.len()
     ));
-    code.push_str("pub struct Probe {\n    pub name: &'static str,\n    pub bytes: &'static [u8],\n}\n\n");
+    code.push_str(
+        "pub struct Probe {\n    pub name: &'static str,\n    pub bytes: &'static [u8],\n}\n\n",
+    );
     code.push_str("pub static PROBES: [Probe; FEATURE_COUNT] = [\n");
 
     for feature in &registry.feature {

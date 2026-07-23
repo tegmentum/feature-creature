@@ -14,7 +14,10 @@ fn main() {
         }
         match dir.parent() {
             Some(p) => dir = p,
-            None => panic!("could not locate Cargo.lock from {}", manifest_dir.display()),
+            None => panic!(
+                "could not locate Cargo.lock from {}",
+                manifest_dir.display()
+            ),
         }
     };
     println!("cargo:rerun-if-changed={}", lockfile.display());

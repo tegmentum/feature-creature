@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  ci:
+    name: build + probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust (stable, +wasm32)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # --- lint ---------------------------------------------------------
+      - name: rustfmt
+        run: cargo fmt --all --check
+
+      - name: clippy (detector, wasm32)
+        run: cargo clippy --lib --release --target wasm32-unknown-unknown -p wasm-feature-detector -- -D warnings
+
+      - name: clippy (host-wasmtime)
+        run: cargo clippy --all-targets --release -p host-wasmtime -- -D warnings
+
+      # --- build --------------------------------------------------------
+      - name: Build detector (wasm32-unknown-unknown)
+        run: cargo build --release --target wasm32-unknown-unknown -p wasm-feature-detector
+
+      - name: Report detector size
+        run: |
+          artifact=target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
+          size=$(wc -c <"$artifact")
+          echo "detector: $size bytes" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Build host-wasmtime
+        run: cargo build --release -p host-wasmtime
+
+      # --- run ----------------------------------------------------------
+      - name: host-wasmtime (pretty)
+        run: cargo run --release -p host-wasmtime | tee wasmtime-pretty.txt
+
+      - name: host-wasmtime (--json)
+        run: |
+          cargo run --release -p host-wasmtime -- --json | tee manifest.json
+          python3 -c "import json,sys; m=json.load(open('manifest.json')); \
+            assert m['schema']=='wasm-feature-detect/capability-manifest/v1', m; \
+            assert m['host']['engine']=='wasmtime', m; \
+            assert isinstance(m['features'], dict) and m['features'], m; \
+            print('manifest ok — %d features, wasmtime %s' % (len(m['features']), m['host']['version']))"
+
+      - name: host-wasmtime rejects unknown args (exit 2)
+        run: |
+          set +e
+          cargo run --release -p host-wasmtime -- --nope 2>err.log
+          rc=$?
+          set -e
+          test "$rc" -eq 2 || { echo "expected exit 2, got $rc"; cat err.log; exit 1; }
+          grep -q "usage:" err.log
+
+      # --- codegen up-to-date ------------------------------------------
+      - name: js/src/features.js is regenerable
+        run: |
+          node scripts/gen-features.mjs
+          git diff --exit-code -- js/src/features.js
+
+      # --- JS bootstrap smoke test -------------------------------------
+      - name: Node smoke test
+        run: node js/test/smoke.mjs | tee node-smoke.txt
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detector-and-outputs
+          path: |
+            target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
+            manifest.json
+            wasmtime-pretty.txt
+            node-smoke.txt
+          if-no-files-found: warn
+          retention-days: 14

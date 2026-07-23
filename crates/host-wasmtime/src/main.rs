@@ -4,9 +4,9 @@
 //! backed by Wasmtime's own module validator, invokes `detect`, and prints
 //! the resulting feature bitmap decoded against `features.toml`.
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use std::{env, fs, path::PathBuf, process::ExitCode};
 use wasmtime::{Caller, Config, Engine, Linker, Module, Store};
 
@@ -45,8 +45,8 @@ fn run() -> Result<()> {
     } = parse_args()?;
 
     let workspace_root = detect_workspace_root()?;
-    let registry_src = fs::read_to_string(workspace_root.join("features.toml"))
-        .context("read features.toml")?;
+    let registry_src =
+        fs::read_to_string(workspace_root.join("features.toml")).context("read features.toml")?;
     let mut registry: Registry = toml::from_str(&registry_src).context("parse features.toml")?;
     registry.feature.sort_by_key(|f| f.bit);
 
@@ -209,7 +209,10 @@ fn emit_json(features: &[Feature], bitmap: &[u8]) -> Result<()> {
     // serde_json's `preserve_order` feature.
     let mut feature_map = Map::new();
     for feature in features {
-        feature_map.insert(feature.name.clone(), Value::Bool(bit_is_set(bitmap, feature.bit)));
+        feature_map.insert(
+            feature.name.clone(),
+            Value::Bool(bit_is_set(bitmap, feature.bit)),
+        );
     }
     let manifest = json!({
         "schema": "wasm-feature-detect/capability-manifest/v1",
