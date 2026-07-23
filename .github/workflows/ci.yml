@@ -101,3 +101,59 @@ jobs:
             node-smoke.txt
           if-no-files-found: warn
           retention-days: 14
+
+  browser:
+    name: browser (chromium)
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # Pull the detector.wasm built by the `ci` job so this job doesn't
+      # need the Rust toolchain. The artifact preserves the target/ layout.
+      - name: Download detector artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: detector-and-outputs
+          path: .
+
+      - name: Verify detector artifact
+        run: |
+          ls -l target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
+
+      - name: Install JS dependencies (playwright)
+        working-directory: js
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright browsers (chromium + deps)
+        working-directory: js
+        run: npx playwright install --with-deps chromium
+
+      # The test script spawns js/test/serve.mjs itself on a random port,
+      # so there is no separate server-start / server-stop step to babysit.
+      - name: Browser smoke test (chromium)
+        working-directory: js
+        env:
+          BROWSERS: chromium
+        # GitHub Actions runs `bash -eo pipefail` by default, so a non-zero
+        # exit from `node` fails the step even through `tee`.
+        run: |
+          mkdir -p test/output
+          node test/browser.test.mjs 2>&1 | tee test/output/browser-run.txt
+
+      - name: Upload browser artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-outputs
+          path: |
+            js/test/output/*.json
+            js/test/output/*.png
+            js/test/output/*.txt
+          if-no-files-found: warn
+          retention-days: 14

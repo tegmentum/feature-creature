@@ -147,6 +147,49 @@ Loads the detector, supplies `WebAssembly.validate` as the host
 capability, and prints the decoded feature map — grouped by namespace
 (see below).
 
+## Running in a browser
+
+The same JS bootstrap runs unchanged in a real browser engine — the
+whole point of a "portable" detector is that V8, JavaScriptCore, and
+SpiderMonkey genuinely disagree on which features are live.
+
+The repo ships a minimal harness in `js/test/`:
+
+- `browser.html` — loads `detector.wasm` via `fetch()`, calls
+  `detect(...)`, sets `window.__result`, and prints the JSON into a
+  `<pre id="result">`.
+- `serve.mjs` — a ~120-line zero-dependency static server that maps
+  `.wasm → application/wasm` and `.js → application/javascript`, and
+  sends the COOP/COEP headers required to enable `SharedArrayBuffer`.
+- `browser.test.mjs` — a Playwright driver that boots the server on a
+  random port, opens the page in one or more browsers, scrapes the
+  result, and asserts every feature declared in `features.toml` came
+  back as a boolean.
+
+```sh
+# one-time: install Playwright browser binaries (Chromium is enough)
+cd js
+npm install
+npx playwright install chromium
+
+# rebuild the detector so it is fresh on disk
+cargo build --release --target wasm32-unknown-unknown -p wasm-feature-detector
+
+# headless run — writes JSON + PNG per browser under js/test/output/
+npm run test:browser
+
+# optional: run all three engines
+BROWSERS=chromium,firefox,webkit npm run test:browser
+```
+
+To poke at the page by hand, `npm run serve` (from `js/`) starts the
+static server on `http://127.0.0.1:8080/` — `browser.html` is the
+default document.
+
+The GitHub Actions workflow runs the Chromium leg of this test on every
+push in a dedicated `browser` job that reuses the detector artifact
+built by the `ci` job.
+
 ## Environment probes
 
 Some capabilities live in the host, not the engine, so the portable

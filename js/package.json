@@ -9,10 +9,15 @@
   },
   "scripts": {
     "test": "node test/smoke.mjs",
+    "test:browser": "node test/browser.test.mjs",
+    "serve": "node test/serve.mjs --port 8080",
     "gen": "node ../scripts/gen-features.mjs"
   },
   "files": [
     "src/",
     "README.md"
-  ]
+  ],
+  "devDependencies": {
+    "playwright": "1.61.1"
+  }
 }
