@@ -19,6 +19,7 @@ wasmtime = { version = "38", default-features = false, features = [
     "threads",
     "wat",
 ] }
-anyhow    = "1"
-serde     = { version = "1", features = ["derive"] }
-toml      = { version = "0.9", default-features = false, features = ["parse", "serde"] }
+anyhow     = "1"
+serde      = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+toml       = { version = "0.9", default-features = false, features = ["parse", "serde"] }

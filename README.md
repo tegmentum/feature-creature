@@ -84,6 +84,45 @@ cargo run --release -p host-wasmtime
 Prints a `name yes/no` row per feature according to what the linked
 Wasmtime engine actually validates.
 
+### Capability manifest
+
+Pass `--json` to emit a structured capability manifest suitable for
+downstream WasmOS/WasmCM consumers:
+
+```sh
+cargo run --release -p host-wasmtime -- --json
+```
+
+The document has this shape (feature keys use exactly the names from
+`features.toml`, in `bit`-index order):
+
+```json
+{
+  "schema": "wasm-feature-detect/capability-manifest/v1",
+  "namespace": "wasm.core",
+  "host": {
+    "engine": "wasmtime",
+    "version": "38"
+  },
+  "features": {
+    "mutable-globals": true,
+    "saturating-float-to-int": true,
+    "sign-extension": true,
+    "bulk-memory": true,
+    "multi-value": true,
+    "reference-types": true,
+    "simd": true,
+    "threads": true,
+    "tail-call": true,
+    "exceptions": true,
+    "memory64": true,
+    "multi-memory": true,
+    "gc": true,
+    "relaxed-simd": true
+  }
+}
+```
+
 ## Running under Node
 
 ```sh
@@ -102,6 +141,3 @@ capability, and prints the decoded feature map.
   detector cannot observe on its own.
 - **Component-model packaging**: the detector today is a core module. A
   component wrapper against `wit/engine.wit` is a follow-up.
-- **Capability manifest emission** for downstream WasmOS/WasmCM
-  consumers — the bitmap is the raw data; a serialiser will layer on
-  top.

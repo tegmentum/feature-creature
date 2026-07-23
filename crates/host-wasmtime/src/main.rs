@@ -6,8 +6,14 @@
 
 use anyhow::{Context, Result, anyhow};
 use serde::Deserialize;
-use std::{env, fs, path::PathBuf};
+use serde_json::{Map, Value, json};
+use std::{env, fs, path::PathBuf, process::ExitCode};
 use wasmtime::{Caller, Config, Engine, Linker, Module, Store};
+
+/// Wasmtime major version. Pinned in `Cargo.toml` (`wasmtime = "38"`);
+/// there is no `wasmtime::VERSION` constant to source it from at runtime,
+/// so we mirror the pin here. Bump alongside the dependency.
+const WASMTIME_VERSION: &str = "38";
 
 #[derive(Deserialize)]
 struct Registry {
@@ -22,12 +28,21 @@ struct Feature {
     probe: String,
 }
 
-fn main() -> Result<()> {
-    let mut args = env::args().skip(1);
-    let detector_path = args
-        .next()
-        .map(PathBuf::from)
-        .unwrap_or_else(default_detector_path);
+fn main() -> ExitCode {
+    match run() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("error: {e:#}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn run() -> Result<()> {
+    let Args {
+        detector_path,
+        json,
+    } = parse_args()?;
 
     let workspace_root = detect_workspace_root()?;
     let registry_src = fs::read_to_string(workspace_root.join("features.toml"))
@@ -59,6 +74,7 @@ fn main() -> Result<()> {
     // through Module::validate and will simply be reported as unsupported.
 
     let engine = Engine::new(&cfg)?;
+    let detector_path = detector_path.unwrap_or_else(|| default_detector_path(&workspace_root));
     let module = Module::from_file(&engine, &detector_path)
         .with_context(|| format!("load {}", detector_path.display()))?;
 
@@ -119,20 +135,91 @@ fn main() -> Result<()> {
         );
     }
 
-    for feature in &registry.feature {
-        let byte = feature.bit as usize / 8;
-        let mask = 1u8 << (feature.bit as usize % 8);
-        let on = bitmap.get(byte).map(|b| b & mask != 0).unwrap_or(false);
-        println!("{:24} {}", feature.name, if on { "yes" } else { "no" });
+    if json {
+        emit_json(&registry.feature, &bitmap)?;
+    } else {
+        emit_pretty(&registry.feature, &bitmap);
     }
 
     Ok(())
 }
 
-fn default_detector_path() -> PathBuf {
-    detect_workspace_root()
-        .expect("locate workspace root")
-        .join("target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm")
+struct Args {
+    detector_path: Option<PathBuf>,
+    json: bool,
+}
+
+fn parse_args() -> Result<Args> {
+    let mut json = false;
+    let mut detector_path: Option<PathBuf> = None;
+    let mut it = env::args().skip(1);
+    while let Some(arg) = it.next() {
+        match arg.as_str() {
+            "--json" => json = true,
+            "--" => {
+                if let Some(p) = it.next() {
+                    detector_path = Some(PathBuf::from(p));
+                }
+                break;
+            }
+            s if s.starts_with("--") => {
+                usage_and_exit();
+            }
+            _ => {
+                if detector_path.is_some() {
+                    usage_and_exit();
+                }
+                detector_path = Some(PathBuf::from(arg));
+            }
+        }
+    }
+    Ok(Args {
+        detector_path,
+        json,
+    })
+}
+
+fn usage_and_exit() -> ! {
+    eprintln!("usage: wasm-feature-detect [--json] [detector.wasm]");
+    std::process::exit(2);
+}
+
+fn bit_is_set(bitmap: &[u8], bit: u32) -> bool {
+    let byte = bit as usize / 8;
+    let mask = 1u8 << (bit as usize % 8);
+    bitmap.get(byte).map(|b| b & mask != 0).unwrap_or(false)
+}
+
+fn emit_pretty(features: &[Feature], bitmap: &[u8]) {
+    for feature in features {
+        let on = bit_is_set(bitmap, feature.bit);
+        println!("{:24} {}", feature.name, if on { "yes" } else { "no" });
+    }
+}
+
+fn emit_json(features: &[Feature], bitmap: &[u8]) -> Result<()> {
+    // Preserve insertion order (features arrive sorted by bit) — requires
+    // serde_json's `preserve_order` feature.
+    let mut feature_map = Map::new();
+    for feature in features {
+        feature_map.insert(feature.name.clone(), Value::Bool(bit_is_set(bitmap, feature.bit)));
+    }
+    let manifest = json!({
+        "schema": "wasm-feature-detect/capability-manifest/v1",
+        "namespace": "wasm.core",
+        "host": {
+            "engine": "wasmtime",
+            "version": WASMTIME_VERSION,
+        },
+        "features": Value::Object(feature_map),
+    });
+    let out = serde_json::to_string_pretty(&manifest).context("serialize manifest")?;
+    println!("{out}");
+    Ok(())
+}
+
+fn default_detector_path(workspace_root: &std::path::Path) -> PathBuf {
+    workspace_root.join("target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm")
 }
 
 fn detect_workspace_root() -> Result<PathBuf> {
