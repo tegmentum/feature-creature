@@ -91,15 +91,44 @@ cd js && npm test
 ```
 
 Loads the detector, supplies `WebAssembly.validate` as the host
-capability, and prints the decoded feature map.
+capability, and prints the decoded feature map — grouped by namespace
+(see below).
+
+## Environment probes
+
+Some capabilities live in the host, not the engine, so the portable
+`detector.wasm` cannot see them. `js/src/environment.js` fills that gap
+with a small set of JS-side probes that mirror the `environment`
+interface in `wit/engine.wit`:
+
+| probe                    | how it's tested                                                                                   |
+|--------------------------|---------------------------------------------------------------------------------------------------|
+| `shared-memory`          | `new SharedArrayBuffer(1)` succeeds.                                                              |
+| `streaming-compilation`  | `WebAssembly.compileStreaming` is a function.                                                     |
+| `bigint-integration`     | Instantiate a module exporting an `() -> i64` function; the returned value is `typeof "bigint"`.  |
+| `js-string-builtins`     | `WebAssembly.validate` accepts a module importing from `wasm:js-string` with `builtins:['js-string']`; falls back to a non-throwing `WebAssembly.instantiate` with the same option. |
+
+Every probe swallows its own errors — a false return always means "not
+available," never "the probe blew up." `detect(source)` now returns a
+namespaced object:
+
+```js
+{
+  core: {         // decoded from detector.wasm's bitmap
+    "mutable-globals": true,
+    // ...
+  },
+  environment: {  // supplied by js/src/environment.js
+    "shared-memory": true,
+    "streaming-compilation": true,
+    "bigint-integration": true,
+    "js-string-builtins": false,
+  },
+}
+```
 
 ## What this is not (yet)
 
-- **Environment probes** (SharedArrayBuffer, JS BigInt boundary, JSPI,
-  streaming compilation) live in `wit/engine.wit` under the `environment`
-  interface but are not wired into the bootstrap. They belong outside
-  the portable detector because they depend on host semantics the
-  detector cannot observe on its own.
 - **Component-model packaging**: the detector today is a core module. A
   component wrapper against `wit/engine.wit` is a follow-up.
 - **Capability manifest emission** for downstream WasmOS/WasmCM

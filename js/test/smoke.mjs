@@ -19,6 +19,13 @@ if (result === WASM_UNSUPPORTED) {
   process.exit(1);
 }
 
-for (const [name, on] of Object.entries(result)) {
-  console.log(`${name.padEnd(24)} ${on ? "yes" : "no"}`);
+function printSection(label, group) {
+  console.log(`# ${label}`);
+  for (const [name, on] of Object.entries(group)) {
+    console.log(`${name.padEnd(24)} ${on ? "yes" : "no"}`);
+  }
 }
+
+printSection("core", result.core);
+console.log("");
+printSection("environment", result.environment);
