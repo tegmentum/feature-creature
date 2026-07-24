@@ -52,9 +52,22 @@ fn run() -> Result<()> {
         json,
         component,
         self_check,
+        emit_component,
+        emit_out,
     } = parse_args()?;
 
     let workspace_root = detect_workspace_root()?;
+
+    // --emit-component runs a build-time-style step (read raw
+    // wit-bindgen output, encode via wit-component, write to disk).
+    // Registry / engine construction aren't needed, so short-circuit
+    // before doing them.
+    if emit_component {
+        let input = detector_path.unwrap_or_else(|| default_component_path(&workspace_root));
+        let output = emit_out.unwrap_or_else(|| default_encoded_component_path(&workspace_root));
+        return emit_component_bytes(&input, &output);
+    }
+
     let registry_src =
         fs::read_to_string(workspace_root.join("features.toml")).context("read features.toml")?;
     let mut registry: Registry = toml::from_str(&registry_src).context("parse features.toml")?;
@@ -460,12 +473,16 @@ struct Args {
     json: bool,
     component: bool,
     self_check: bool,
+    emit_component: bool,
+    emit_out: Option<PathBuf>,
 }
 
 fn parse_args() -> Result<Args> {
     let mut json = false;
     let mut component = false;
     let mut self_check = false;
+    let mut emit_component = false;
+    let mut emit_out: Option<PathBuf> = None;
     let mut detector_path: Option<PathBuf> = None;
     let mut it = env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -473,11 +490,16 @@ fn parse_args() -> Result<Args> {
             "--json" => json = true,
             "--component" => component = true,
             "--self-check" => self_check = true,
+            "--emit-component" => emit_component = true,
             "--" => {
                 if let Some(p) = it.next() {
                     detector_path = Some(PathBuf::from(p));
                 }
                 break;
+            }
+            s if s.starts_with("--emit-component=") => {
+                emit_component = true;
+                emit_out = Some(PathBuf::from(&s["--emit-component=".len()..]));
             }
             s if s.starts_with("--") => {
                 usage_and_exit();
@@ -490,6 +512,9 @@ fn parse_args() -> Result<Args> {
             }
         }
     }
+    // At most one mode flag: --json is a detection mode; --self-check,
+    // --component, and --emit-component are separate modes with
+    // conflicting semantics.
     if json && self_check {
         eprintln!("--json and --self-check are mutually exclusive");
         std::process::exit(2);
@@ -500,16 +525,24 @@ fn parse_args() -> Result<Args> {
         eprintln!("--component and --self-check are mutually exclusive");
         std::process::exit(2);
     }
+    if emit_component && (json || self_check || component) {
+        eprintln!("--emit-component cannot be combined with other mode flags");
+        std::process::exit(2);
+    }
     Ok(Args {
         detector_path,
         json,
         component,
         self_check,
+        emit_component,
+        emit_out,
     })
 }
 
 fn usage_and_exit() -> ! {
-    eprintln!("usage: wasm-feature-detect [--json] [--component | --self-check] [detector.wasm]");
+    eprintln!(
+        "usage: wasm-feature-detect [--json] [--component | --self-check | --emit-component[=<path>]] [detector.wasm]"
+    );
     std::process::exit(2);
 }
 
@@ -557,6 +590,27 @@ fn default_detector_path(workspace_root: &std::path::Path) -> PathBuf {
 fn default_component_path(workspace_root: &std::path::Path) -> PathBuf {
     workspace_root
         .join("target/wasm32-unknown-unknown/release/wasm_feature_detector_component.wasm")
+}
+
+fn default_encoded_component_path(workspace_root: &std::path::Path) -> PathBuf {
+    workspace_root
+        .join("target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm")
+}
+
+/// Read `input` (a raw wit-bindgen-produced core module with an embedded
+/// `component-type` custom section), encode it via `wit-component`, and
+/// write the resulting proper component to `output`. Prints the byte
+/// count. No-op re-encode is silently accepted — `ensure_component`
+/// returns already-encoded input unchanged.
+fn emit_component_bytes(input: &std::path::Path, output: &std::path::Path) -> Result<()> {
+    let raw = fs::read(input).map_err(|e| anyhow!("read {}: {e}", input.display()))?;
+    let encoded = ensure_component(raw).context("encode component")?;
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).map_err(|e| anyhow!("create {}: {e}", parent.display()))?;
+    }
+    fs::write(output, &encoded).map_err(|e| anyhow!("write {}: {e}", output.display()))?;
+    eprintln!("wrote {} ({} bytes)", output.display(), encoded.len());
+    Ok(())
 }
 
 fn detect_workspace_root() -> Result<PathBuf> {

@@ -41,6 +41,9 @@ jobs:
       - name: clippy (detector, wasm32)
         run: cargo clippy --lib --release --target wasm32-unknown-unknown -p wasm-feature-detector -- -D warnings
 
+      - name: clippy (component detector, wasm32)
+        run: cargo clippy --lib --release --target wasm32-unknown-unknown -p wasm-feature-detector-component -- -D warnings
+
       - name: clippy (host-wasmtime)
         run: cargo clippy --all-targets --release -p host-wasmtime -- -D warnings
 
@@ -48,14 +51,28 @@ jobs:
       - name: Build detector (wasm32-unknown-unknown)
         run: cargo build --release --target wasm32-unknown-unknown -p wasm-feature-detector
 
+      - name: Build component detector (wasm32-unknown-unknown)
+        run: cargo build --release --target wasm32-unknown-unknown -p wasm-feature-detector-component
+
       - name: Report detector size
         run: |
-          artifact=target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
-          size=$(wc -c <"$artifact")
-          echo "detector: $size bytes" | tee -a "$GITHUB_STEP_SUMMARY"
+          core=target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
+          comp=target/wasm32-unknown-unknown/release/wasm_feature_detector_component.wasm
+          echo "core detector:      $(wc -c <"$core") bytes"      | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "component detector: $(wc -c <"$comp") bytes (pre-encode)" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Build host-wasmtime
         run: cargo build --release -p host-wasmtime
+
+      - name: Emit encoded component (.component.wasm)
+        run: |
+          cargo run --release -p host-wasmtime -- --emit-component
+          out=target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm
+          echo "encoded component:  $(wc -c <"$out") bytes"       | tee -a "$GITHUB_STEP_SUMMARY"
+          # Preamble check: '\0asm' + version=0x000d + layer=0x0001
+          head -c 8 "$out" | xxd -p | grep -q '^0061736d0d000100$' || {
+            echo "encoded component missing component-model preamble"; exit 1;
+          }
 
       # --- run ----------------------------------------------------------
       - name: host-wasmtime (pretty)
@@ -89,6 +106,16 @@ jobs:
       - name: Node smoke test
         run: node js/test/smoke.mjs | tee node-smoke.txt
 
+      - name: host-wasmtime (--component, from encoded artifact)
+        run: |
+          cargo run --release -p host-wasmtime -- \
+            --component \
+            target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm \
+            | tee wasmtime-component.txt
+          diff -u wasmtime-pretty.txt wasmtime-component.txt || {
+            echo "component surface disagrees with core module"; exit 1;
+          }
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -96,8 +123,10 @@ jobs:
           name: detector-and-outputs
           path: |
             target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
+            target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm
             manifest.json
             wasmtime-pretty.txt
+            wasmtime-component.txt
             node-smoke.txt
           if-no-files-found: warn
           retention-days: 14

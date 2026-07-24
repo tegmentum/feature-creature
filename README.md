@@ -277,9 +277,24 @@ Under the hood, `--component`:
    decodes the bitmap against `features.toml` — producing the same
    output as the default (core-module) mode.
 
-To pre-encode the component on disk without host-wasmtime (e.g. for
-downstream WasmOS/WasmCM consumers that only speak the component
-model), install `wasm-tools` and run:
+To pre-encode the component on disk — the artifact downstream
+WasmOS/WasmCM consumers actually want — use the host's own
+`--emit-component` mode:
+
+```sh
+cargo build --release -p wasm-feature-detector-component --target wasm32-unknown-unknown
+cargo run   --release -p host-wasmtime -- --emit-component
+```
+
+That produces
+`target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm`,
+a proper component-model binary (preamble `\0asm\x0d\x00\x01\x00`)
+around 16 KB. Pass a positional input and/or `--emit-component=<out>`
+to override either path. The step is idempotent — an
+already-encoded input passes through unchanged.
+
+`wasm-tools component new` works too, if you prefer a standalone
+toolchain:
 
 ```sh
 cargo install wasm-tools
@@ -288,8 +303,8 @@ wasm-tools component new \
   -o detector.component.wasm
 ```
 
-The resulting `detector.component.wasm` is accepted directly by
-`host-wasmtime --component detector.component.wasm`.
+Either artifact is accepted by
+`host-wasmtime --component <path>`.
 
 ## License
 
