@@ -9,7 +9,7 @@ members = [
 [workspace.package]
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/tegmentum/wasm-feature-detect"
+repository = "https://github.com/tegmentum/feature-creature"
 
 [profile.release]
 opt-level = "z"

@@ -1,4 +1,8 @@
-# wasm-feature-detect
+<p align="center">
+  <img src="feature-creature-logo.png" alt="Feature Creature" width="360">
+</p>
+
+# feature-creature
 
 Portable WebAssembly feature detection, bootstrapped into WebAssembly itself.
 
@@ -99,11 +103,11 @@ Prerequisites: Rust with the `wasm32-unknown-unknown` target and Node 20+.
 
 ```sh
 rustup target add wasm32-unknown-unknown
-cargo build --release -p wasm-feature-detector --target wasm32-unknown-unknown
+cargo build --release -p feature-creature-detector --target wasm32-unknown-unknown
 ```
 
 The detector artifact lands at
-`target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm`.
+`target/wasm32-unknown-unknown/release/feature_creature_detector.wasm`.
 
 ## Running against Wasmtime
 
@@ -129,7 +133,7 @@ The document has this shape (feature keys use exactly the names from
 
 ```json
 {
-  "schema": "wasm-feature-detect/capability-manifest/v1",
+  "schema": "feature-creature/capability-manifest/v1",
   "namespace": "wasm.core",
   "host": {
     "engine": "wasmtime",
@@ -180,7 +184,7 @@ npm install
 npx playwright install chromium
 
 # rebuild the detector so it is fresh on disk
-cargo build --release --target wasm32-unknown-unknown -p wasm-feature-detector
+cargo build --release --target wasm32-unknown-unknown -p feature-creature-detector
 
 # headless run — writes JSON + PNG per browser under js/test/output/
 npm run test:browser
@@ -250,11 +254,11 @@ Build the component variant with the same `wasm32-unknown-unknown`
 target:
 
 ```sh
-cargo build --release -p wasm-feature-detector-component --target wasm32-unknown-unknown
+cargo build --release -p feature-creature-detector-component --target wasm32-unknown-unknown
 ```
 
 The artifact lands at
-`target/wasm32-unknown-unknown/release/wasm_feature_detector_component.wasm`.
+`target/wasm32-unknown-unknown/release/feature_creature_detector_component.wasm`.
 It's still a core module at this point — the `component-type` custom
 section describes how to wrap it. `host-wasmtime --component` performs
 that wrap in-memory (via the `wit-component` crate) and instantiates
@@ -270,7 +274,7 @@ Under the hood, `--component`:
 1. Reads the file. If its preamble is already the component-model magic,
    it's used as-is; otherwise `wit_component::ComponentEncoder` wraps it.
 2. Instantiates the component with `wasmtime::component::Linker`,
-   supplying the `wasm-feature-detect:engine/engine@0.1.0` interface
+   supplying the `feature-creature:engine/engine@0.1.0` interface
    whose sole `validate: func(bytes: list<u8>) -> bool` import is
    backed by `wasmtime::Module::validate`.
 3. Calls the world's `detect-core: func() -> list<u8>` export and
@@ -282,12 +286,12 @@ WasmOS/WasmCM consumers actually want — use the host's own
 `--emit-component` mode:
 
 ```sh
-cargo build --release -p wasm-feature-detector-component --target wasm32-unknown-unknown
+cargo build --release -p feature-creature-detector-component --target wasm32-unknown-unknown
 cargo run   --release -p host-wasmtime -- --emit-component
 ```
 
 That produces
-`target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm`,
+`target/wasm32-unknown-unknown/release/feature_creature_detector.component.wasm`,
 a proper component-model binary (preamble `\0asm\x0d\x00\x01\x00`)
 around 16 KB. Pass a positional input and/or `--emit-component=<out>`
 to override either path. The step is idempotent — an
@@ -299,7 +303,7 @@ toolchain:
 ```sh
 cargo install wasm-tools
 wasm-tools component new \
-  target/wasm32-unknown-unknown/release/wasm_feature_detector_component.wasm \
+  target/wasm32-unknown-unknown/release/feature_creature_detector_component.wasm \
   -o detector.component.wasm
 ```
 

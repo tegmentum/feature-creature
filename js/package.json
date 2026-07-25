@@ -1,5 +1,5 @@
 {
-  "name": "wasm-feature-detect-bootstrap",
+  "name": "feature-creature-bootstrap",
   "version": "0.1.0",
   "description": "Tiny host-side bootstrap that hands validate() to detector.wasm and decodes the returned feature bitmap.",
   "type": "module",

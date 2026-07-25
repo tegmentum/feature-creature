@@ -9,7 +9,7 @@ import { detect, WASM_UNSUPPORTED } from "../src/index.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const wasmPath = resolve(
   here,
-  "../../target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm",
+  "../../target/wasm32-unknown-unknown/release/feature_creature_detector.wasm",
 );
 
 const bytes = await readFile(wasmPath);

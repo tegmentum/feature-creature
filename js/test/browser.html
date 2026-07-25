@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>wasm-feature-detect browser harness</title>
+    <title>feature-creature browser harness</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
   </head>
   <body>
-    <h1>wasm-feature-detect</h1>
+    <h1>feature-creature</h1>
     <p>
       Live run of the JS bootstrap in the browser. The decoded feature map is
       exposed at <code>window.__result</code> (or <code>window.__error</code>
@@ -16,10 +16,10 @@
 
     <script type="module">
       // Path is relative to this HTML file. The static server maps this to
-      //   /target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
+      //   /target/wasm32-unknown-unknown/release/feature_creature_detector.wasm
       // when serving from the repo root.
       const wasmURL = new URL(
-        "../../target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm",
+        "../../target/wasm32-unknown-unknown/release/feature_creature_detector.wasm",
         import.meta.url,
       );
       const pre = document.getElementById("result");

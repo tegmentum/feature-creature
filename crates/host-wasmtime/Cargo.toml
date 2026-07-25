@@ -6,7 +6,7 @@ license.workspace     = true
 repository.workspace  = true
 
 [[bin]]
-name = "wasm-feature-detect"
+name = "feature-creature"
 path = "src/main.rs"
 
 [dependencies]

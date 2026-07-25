@@ -326,6 +326,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "feature-creature-detector"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "toml",
+ "wat",
+]
+
+[[package]]
+name = "feature-creature-detector-component"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "toml",
+ "wat",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -906,25 +925,6 @@ checksum = "09480d646178e5fdd12bb06e812d0af9a3a191dbc9cd697fdc86687beade7393"
 dependencies = [
  "leb128fmt",
  "wasmparser 0.254.0",
-]
-
-[[package]]
-name = "wasm-feature-detector"
-version = "0.1.0"
-dependencies = [
- "serde",
- "toml",
- "wat",
-]
-
-[[package]]
-name = "wasm-feature-detector-component"
-version = "0.1.0"
-dependencies = [
- "serde",
- "toml",
- "wat",
- "wit-bindgen",
 ]
 
 [[package]]

@@ -6,7 +6,7 @@
 //!    decodes the returned bitmap.
 //!  * `--component`: instantiates the component-model variant against
 //!    the `detector` world in `wit/engine.wit`, provides
-//!    `wasm-feature-detect:engine/engine.validate` as a canonical-ABI
+//!    `feature-creature:engine/engine.validate` as a canonical-ABI
 //!    import, and calls `detect-core`.
 //!
 //! Both modes emit the same feature bitmap, decoded against
@@ -224,7 +224,7 @@ fn detect_via_component(engine: &Engine, detector_path: &std::path::Path) -> Res
 
     let validator_engine = engine.clone();
     let mut linker: CLinker<()> = CLinker::new(engine);
-    // `wasm-feature-detect:engine` is the WIT package name and `engine`
+    // `feature-creature:engine` is the WIT package name and `engine`
     // is the interface name inside it — see `wit/engine.wit`. The world
     // pulls the interface in via `import engine;` so components see it
     // at this fully-qualified path.
@@ -232,7 +232,7 @@ fn detect_via_component(engine: &Engine, detector_path: &std::path::Path) -> Res
     // which doesn't implement `StdError` in this build, so
     // `anyhow::Context` won't attach. Use `map_err` instead.
     let mut iface = linker
-        .instance("wasm-feature-detect:engine/engine@0.1.0")
+        .instance("feature-creature:engine/engine@0.1.0")
         .map_err(|e| anyhow!("declare engine import instance: {e}"))?;
     iface
         .func_wrap(
@@ -541,7 +541,7 @@ fn parse_args() -> Result<Args> {
 
 fn usage_and_exit() -> ! {
     eprintln!(
-        "usage: wasm-feature-detect [--json] [--component | --self-check | --emit-component[=<path>]] [detector.wasm]"
+        "usage: feature-creature [--json] [--component | --self-check | --emit-component[=<path>]] [detector.wasm]"
     );
     std::process::exit(2);
 }
@@ -570,7 +570,7 @@ fn emit_json(features: &[Feature], bitmap: &[u8]) -> Result<()> {
         );
     }
     let manifest = json!({
-        "schema": "wasm-feature-detect/capability-manifest/v1",
+        "schema": "feature-creature/capability-manifest/v1",
         "namespace": "wasm.core",
         "host": {
             "engine": "wasmtime",
@@ -584,17 +584,17 @@ fn emit_json(features: &[Feature], bitmap: &[u8]) -> Result<()> {
 }
 
 fn default_detector_path(workspace_root: &std::path::Path) -> PathBuf {
-    workspace_root.join("target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm")
+    workspace_root.join("target/wasm32-unknown-unknown/release/feature_creature_detector.wasm")
 }
 
 fn default_component_path(workspace_root: &std::path::Path) -> PathBuf {
     workspace_root
-        .join("target/wasm32-unknown-unknown/release/wasm_feature_detector_component.wasm")
+        .join("target/wasm32-unknown-unknown/release/feature_creature_detector_component.wasm")
 }
 
 fn default_encoded_component_path(workspace_root: &std::path::Path) -> PathBuf {
     workspace_root
-        .join("target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm")
+        .join("target/wasm32-unknown-unknown/release/feature_creature_detector.component.wasm")
 }
 
 /// Read `input` (a raw wit-bindgen-produced core module with an embedded

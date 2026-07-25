@@ -1,4 +1,4 @@
-package wasm-feature-detect:engine@0.1.0;
+package feature-creature:engine@0.1.0;
 
 /// Host-provided validation primitive. This is the sole capability the
 /// portable detector needs from its environment; everything else it can

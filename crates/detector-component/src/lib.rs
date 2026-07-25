@@ -24,9 +24,9 @@ wit_bindgen::generate!({
 });
 
 // The `engine` interface lives under the WIT package
-// `wasm-feature-detect:engine` and is imported into the `detector`
+// `feature-creature:engine` and is imported into the `detector`
 // world, so wit-bindgen exposes it at this path.
-use wasm_feature_detect::engine::engine as host_engine;
+use feature_creature::engine::engine as host_engine;
 
 struct Component;
 

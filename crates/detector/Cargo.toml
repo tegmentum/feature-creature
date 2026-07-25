@@ -1,5 +1,5 @@
 [package]
-name        = "wasm-feature-detector"
+name        = "feature-creature-detector"
 version     = "0.1.0"
 edition.workspace     = true
 license.workspace     = true

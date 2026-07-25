@@ -39,25 +39,25 @@ jobs:
         run: cargo fmt --all --check
 
       - name: clippy (detector, wasm32)
-        run: cargo clippy --lib --release --target wasm32-unknown-unknown -p wasm-feature-detector -- -D warnings
+        run: cargo clippy --lib --release --target wasm32-unknown-unknown -p feature-creature-detector -- -D warnings
 
       - name: clippy (component detector, wasm32)
-        run: cargo clippy --lib --release --target wasm32-unknown-unknown -p wasm-feature-detector-component -- -D warnings
+        run: cargo clippy --lib --release --target wasm32-unknown-unknown -p feature-creature-detector-component -- -D warnings
 
       - name: clippy (host-wasmtime)
         run: cargo clippy --all-targets --release -p host-wasmtime -- -D warnings
 
       # --- build --------------------------------------------------------
       - name: Build detector (wasm32-unknown-unknown)
-        run: cargo build --release --target wasm32-unknown-unknown -p wasm-feature-detector
+        run: cargo build --release --target wasm32-unknown-unknown -p feature-creature-detector
 
       - name: Build component detector (wasm32-unknown-unknown)
-        run: cargo build --release --target wasm32-unknown-unknown -p wasm-feature-detector-component
+        run: cargo build --release --target wasm32-unknown-unknown -p feature-creature-detector-component
 
       - name: Report detector size
         run: |
-          core=target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
-          comp=target/wasm32-unknown-unknown/release/wasm_feature_detector_component.wasm
+          core=target/wasm32-unknown-unknown/release/feature_creature_detector.wasm
+          comp=target/wasm32-unknown-unknown/release/feature_creature_detector_component.wasm
           echo "core detector:      $(wc -c <"$core") bytes"      | tee -a "$GITHUB_STEP_SUMMARY"
           echo "component detector: $(wc -c <"$comp") bytes (pre-encode)" | tee -a "$GITHUB_STEP_SUMMARY"
 
@@ -67,7 +67,7 @@ jobs:
       - name: Emit encoded component (.component.wasm)
         run: |
           cargo run --release -p host-wasmtime -- --emit-component
-          out=target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm
+          out=target/wasm32-unknown-unknown/release/feature_creature_detector.component.wasm
           echo "encoded component:  $(wc -c <"$out") bytes"       | tee -a "$GITHUB_STEP_SUMMARY"
           # Preamble check: '\0asm' + version=0x000d + layer=0x0001
           head -c 8 "$out" | xxd -p | grep -q '^0061736d0d000100$' || {
@@ -82,7 +82,7 @@ jobs:
         run: |
           cargo run --release -p host-wasmtime -- --json | tee manifest.json
           python3 -c "import json,sys; m=json.load(open('manifest.json')); \
-            assert m['schema']=='wasm-feature-detect/capability-manifest/v1', m; \
+            assert m['schema']=='feature-creature/capability-manifest/v1', m; \
             assert m['host']['engine']=='wasmtime', m; \
             assert isinstance(m['features'], dict) and m['features'], m; \
             print('manifest ok — %d features, wasmtime %s' % (len(m['features']), m['host']['version']))"
@@ -110,7 +110,7 @@ jobs:
         run: |
           cargo run --release -p host-wasmtime -- \
             --component \
-            target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm \
+            target/wasm32-unknown-unknown/release/feature_creature_detector.component.wasm \
             | tee wasmtime-component.txt
           diff -u wasmtime-pretty.txt wasmtime-component.txt || {
             echo "component surface disagrees with core module"; exit 1;
@@ -122,8 +122,8 @@ jobs:
         with:
           name: detector-and-outputs
           path: |
-            target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
-            target/wasm32-unknown-unknown/release/wasm_feature_detector.component.wasm
+            target/wasm32-unknown-unknown/release/feature_creature_detector.wasm
+            target/wasm32-unknown-unknown/release/feature_creature_detector.component.wasm
             manifest.json
             wasmtime-pretty.txt
             wasmtime-component.txt
@@ -153,7 +153,7 @@ jobs:
 
       - name: Verify detector artifact
         run: |
-          ls -l target/wasm32-unknown-unknown/release/wasm_feature_detector.wasm
+          ls -l target/wasm32-unknown-unknown/release/feature_creature_detector.wasm
 
       - name: Install JS dependencies (playwright)
         working-directory: js
