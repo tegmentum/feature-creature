@@ -20,26 +20,6 @@ probe modules and reports back a stable feature bitmap. The same detector
 binary runs unchanged under a browser, Node, Wasmtime, or any other host
 willing to supply `validate`.
 
-## Prior art
-
-The immediate inspiration is
-[GoogleChromeLabs/wasm-feature-detect][gcl], which ships a curated set of
-minimal feature-triggering Wasm modules that each get validated via
-`WebAssembly.validate`. This project starts from the same idea but
-inverts the architecture: the JS side shrinks to a bootstrap that only
-supplies `validate(bytes) -> bool`, and the probe fixtures live inside a
-portable `detector.wasm` alongside the code that runs them. The same
-detector then works unchanged under any host — browser, Node, Wasmtime,
-WasmOS, WAMR — that can implement one function.
-
-That reframing also lets the same feature catalogue serve as a capability
-substrate: build-time specialisation of downstream Wasm-based systems,
-runtime capability negotiation between components, and — via
-`wit/engine.wit` — a component-model interface for hosts that speak WIT
-natively.
-
-[gcl]: https://github.com/GoogleChromeLabs/wasm-feature-detect
-
 ## Architecture
 
 ```
@@ -317,6 +297,26 @@ wasm-tools component new \
 
 Either artifact is accepted by
 `host-wasmtime --component <path>`.
+
+## Prior art
+
+The immediate inspiration is
+[GoogleChromeLabs/wasm-feature-detect][gcl], which ships a curated set of
+minimal feature-triggering Wasm modules that each get validated via
+`WebAssembly.validate`. This project starts from the same idea but
+inverts the architecture: the JS side shrinks to a bootstrap that only
+supplies `validate(bytes) -> bool`, and the probe fixtures live inside a
+portable `detector.wasm` alongside the code that runs them. The same
+detector then works unchanged under any host — browser, Node, Wasmtime,
+WasmOS, WAMR — that can implement one function.
+
+That reframing also lets the same feature catalogue serve as a capability
+substrate: build-time specialisation of downstream Wasm-based systems,
+runtime capability negotiation between components, and — via
+`wit/engine.wit` — a component-model interface for hosts that speak WIT
+natively.
+
+[gcl]: https://github.com/GoogleChromeLabs/wasm-feature-detect
 
 ## License
 
