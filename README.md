@@ -2,13 +2,16 @@
   <img src="feature-creature-logo.png" alt="Feature Creature" width="360">
 </p>
 
+<p align="center">
+  <strong><a href="https://tegmentum.github.io/feature-creature/">Live demo — feature report for your browser</a></strong>
+</p>
+
 # feature-creature
 
 Portable WebAssembly feature detection, bootstrapped into WebAssembly itself.
 
-**Live demo:** [tegmentum.github.io/feature-creature](https://tegmentum.github.io/feature-creature/)
-— open it in any browser to get a report of the Wasm features that browser
-actually supports. Source under `web/`, deployed by `.github/workflows/pages.yml`.
+The live demo above runs the same detector in-browser. Source under `web/`,
+deployed by `.github/workflows/pages.yml`.
 
 A tiny host-side shim asks *"is WebAssembly present?"* and hands one
 capability — `validate(bytes) -> bool` — to a portable detector module.
