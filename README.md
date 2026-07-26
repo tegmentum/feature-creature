@@ -6,6 +6,10 @@
 
 Portable WebAssembly feature detection, bootstrapped into WebAssembly itself.
 
+**Live demo:** [tegmentum.github.io/feature-creature](https://tegmentum.github.io/feature-creature/)
+— open it in any browser to get a report of the Wasm features that browser
+actually supports. Source under `web/`, deployed by `.github/workflows/pages.yml`.
+
 A tiny host-side shim asks *"is WebAssembly present?"* and hands one
 capability — `validate(bytes) -> bool` — to a portable detector module.
 Everything else lives in `detector.wasm`, which carries its own minimal
@@ -90,6 +94,7 @@ crates/host-wasmtime/        # native runner: core-module by default,
 js/                          # ~1 KiB browser/Node bootstrap
   src/features.js            # generated from features.toml (do not edit)
 scripts/gen-features.mjs     # regenerates js/src/features.js from the registry
+web/                         # index.html for the GitHub Pages demo
 ```
 
 `js/src/features.js` is generated — after editing `features.toml`, run

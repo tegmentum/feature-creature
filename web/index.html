@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>feature-creature — WebAssembly capability report</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="A live WebAssembly capability report for your browser, powered by feature-creature's portable detector.wasm."
+    />
+    <link rel="icon" href="./assets/logo.png" />
+    <style>
+      :root {
+        --purple: #5b30b8;
+        --purple-soft: #eee8ff;
+        --purple-line: #d9ccff;
+        --green: #63b53a;
+        --green-soft: #e6f5db;
+        --green-ink: #2f6810;
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #6b6b6b;
+        --border: #e5e5e5;
+        --card: #fafafa;
+        --neutral-soft: #eeeeee;
+        --neutral-ink: #666666;
+        --danger: #b8324e;
+        --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family: var(--font-body);
+        color: var(--fg);
+        background: var(--bg);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      .page {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 40px 24px 96px;
+      }
+      header.hero {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .hero img {
+        max-width: 280px;
+        width: 60%;
+        height: auto;
+        display: block;
+        margin: 0 auto 8px;
+      }
+      .hero p.subtitle {
+        color: var(--muted);
+        font-size: 1.05rem;
+        margin: 0 auto;
+        max-width: 44rem;
+      }
+      section { margin-bottom: 40px; }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 1.25rem;
+        color: var(--purple);
+        border-bottom: 2px solid var(--purple-soft);
+        padding-bottom: 6px;
+      }
+      p.blurb {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      p.blurb code { font-size: 0.9em; }
+      .status {
+        margin: 0 0 24px;
+        padding: 12px 14px;
+        border: 1px solid var(--purple-line);
+        background: var(--purple-soft);
+        border-radius: 10px;
+        color: var(--fg);
+        font-size: 0.95rem;
+      }
+      .status.error {
+        border-color: #f0c9d1;
+        background: #fbecef;
+        color: var(--danger);
+      }
+      .status .count {
+        font-family: var(--font-mono);
+        color: var(--purple);
+        font-weight: 600;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 10px;
+      }
+      .feature {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card);
+      }
+      .feature .name {
+        font-family: var(--font-mono);
+        font-size: 0.88rem;
+        word-break: break-word;
+      }
+      .pill {
+        flex: none;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .pill.yes { background: var(--green-soft); color: var(--green-ink); }
+      .pill.no  { background: var(--neutral-soft); color: var(--neutral-ink); }
+      dl.env-info {
+        margin: 0;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card);
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 4px 16px;
+        font-size: 0.9rem;
+      }
+      dl.env-info dt { color: var(--muted); }
+      dl.env-info dd {
+        margin: 0;
+        font-family: var(--font-mono);
+        word-break: break-word;
+      }
+      details {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card);
+        padding: 12px 14px;
+      }
+      details[open] { padding-bottom: 16px; }
+      summary { cursor: pointer; font-weight: 600; color: var(--purple); }
+      pre {
+        margin: 12px 0 0;
+        padding: 12px;
+        background: #f5f2fb;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        line-height: 1.45;
+      }
+      footer {
+        margin-top: 56px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      footer a { color: var(--purple); }
+      .spinner {
+        display: inline-block;
+        width: 14px; height: 14px;
+        border: 2px solid var(--purple-line);
+        border-top-color: var(--purple);
+        border-radius: 50%;
+        vertical-align: -2px;
+        margin-right: 8px;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <img
+          src="./assets/logo.png"
+          alt="Feature Creature — a green monster holding a purple WASM sign"
+        />
+        <p class="subtitle">
+          A live WebAssembly capability report for the browser you're reading
+          this in. Every value below is probed on this page, right now.
+        </p>
+      </header>
+
+      <p id="status" class="status">
+        <span class="spinner"></span>Loading <code>detector.wasm</code>…
+      </p>
+
+      <section id="core-section" hidden>
+        <h2>Core engine features</h2>
+        <p class="blurb">
+          Decoded from <code>detector.wasm</code>, a portable feature-detector
+          whose only import is <code>engine.validate</code>. Each row is one
+          Wasm proposal — a "yes" means <code>WebAssembly.validate</code>
+          accepts a minimal module that uses it.
+        </p>
+        <div id="core" class="grid"></div>
+      </section>
+
+      <section id="env-section" hidden>
+        <h2>Environment probes</h2>
+        <p class="blurb">
+          Capabilities that live in the host, not in the engine itself —
+          <code>SharedArrayBuffer</code>, streaming compilation, the
+          BigInt↔i64 boundary, JS String Builtins, and JSPI.
+          <code>shared-memory-transferable</code> also needs cross-origin
+          isolation (COOP/COEP), which GitHub Pages does not send, so it may
+          report "no" here even when your browser supports it.
+        </p>
+        <div id="env" class="grid"></div>
+      </section>
+
+      <section id="ua-section" hidden>
+        <h2>Browser</h2>
+        <dl class="env-info">
+          <dt>User-Agent</dt><dd id="ua">—</dd>
+          <dt>Platform</dt><dd id="platform">—</dd>
+          <dt>Hardware concurrency</dt><dd id="cores">—</dd>
+        </dl>
+      </section>
+
+      <section id="json-section" hidden>
+        <h2>Raw report</h2>
+        <details>
+          <summary>Show JSON</summary>
+          <pre id="json"></pre>
+        </details>
+      </section>
+
+      <footer>
+        <p>
+          Source, detector, and this page:
+          <a href="https://github.com/tegmentum/feature-creature">github.com/tegmentum/feature-creature</a>
+        </p>
+      </footer>
+    </div>
+
+    <script type="module">
+      import { detect, WASM_UNSUPPORTED } from "./js/index.js";
+
+      const statusEl = document.getElementById("status");
+
+      function pill(value) {
+        const el = document.createElement("span");
+        el.className = "pill " + (value ? "yes" : "no");
+        el.textContent = value ? "yes" : "no";
+        return el;
+      }
+
+      function renderGroup(container, entries) {
+        container.replaceChildren();
+        for (const [name, value] of entries) {
+          const row = document.createElement("div");
+          row.className = "feature";
+          const label = document.createElement("span");
+          label.className = "name";
+          label.textContent = name;
+          row.append(label, pill(value));
+          container.appendChild(row);
+        }
+      }
+
+      function show(id) {
+        document.getElementById(id).hidden = false;
+      }
+
+      try {
+        const result = await detect(fetch("./assets/detector.wasm"));
+        if (result === WASM_UNSUPPORTED) {
+          statusEl.className = "status error";
+          statusEl.textContent =
+            "This browser doesn't expose WebAssembly at all — no report possible.";
+        } else {
+          const core = { ...result.core };
+          const env  = { ...result.environment };
+
+          renderGroup(document.getElementById("core"), Object.entries(core));
+          renderGroup(document.getElementById("env"),  Object.entries(env));
+
+          document.getElementById("ua").textContent       = navigator.userAgent || "—";
+          document.getElementById("platform").textContent = navigator.platform  || "—";
+          document.getElementById("cores").textContent    =
+            navigator.hardwareConcurrency ? String(navigator.hardwareConcurrency) : "—";
+
+          document.getElementById("json").textContent =
+            JSON.stringify({ core, environment: env }, null, 2);
+
+          const values = [...Object.values(core), ...Object.values(env)];
+          const total = values.length;
+          const yes   = values.filter(Boolean).length;
+          statusEl.innerHTML =
+            `Probed <span class="count">${total}</span> capabilities — ` +
+            `<span class="count">${yes}</span> supported, ` +
+            `<span class="count">${total - yes}</span> not.`;
+
+          show("core-section");
+          show("env-section");
+          show("ua-section");
+          show("json-section");
+        }
+      } catch (err) {
+        statusEl.className = "status error";
+        statusEl.textContent =
+          "detector.wasm failed to run: " + (err && err.message ? err.message : String(err));
+        console.error(err);
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,71 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust (stable, +wasm32)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build detector (wasm32-unknown-unknown)
+        run: cargo build --release --target wasm32-unknown-unknown -p feature-creature-detector
+
+      - name: Assemble _site/
+        run: |
+          set -eux
+          mkdir -p _site/assets _site/js
+          cp web/index.html                                                     _site/index.html
+          cp feature-creature-logo.png                                          _site/assets/logo.png
+          cp target/wasm32-unknown-unknown/release/feature_creature_detector.wasm \
+                                                                                _site/assets/detector.wasm
+          cp js/src/index.js       _site/js/index.js
+          cp js/src/features.js    _site/js/features.js
+          cp js/src/environment.js _site/js/environment.js
+          # Opt out of Jekyll so nothing rewrites our .wasm / underscore paths.
+          touch _site/.nojekyll
+          echo "--- built _site/ ---"
+          find _site -type f -printf '%p  %s bytes\n'
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
