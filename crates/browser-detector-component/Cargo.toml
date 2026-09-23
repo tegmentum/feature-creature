@@ -1,0 +1,25 @@
+[package]
+name        = "feature-creature-browser-detector-component"
+version     = "0.1.0"
+edition.workspace     = true
+license.workspace     = true
+repository.workspace  = true
+
+# Emit a cdylib so `cargo build --target wasm32-unknown-unknown` produces
+# raw core wasm. `host-wasmtime --component` (or `wasm-tools component
+# new`) encodes it into a component-model artifact using the WIT metadata
+# wit-bindgen embeds at compile time. Same pattern as the sibling
+# `feature-creature-detector-component` crate; the two exist as separate
+# components because the `detector` and `browser-detector` worlds have
+# disjoint import surfaces — a native embedder that only wants core-wasm
+# feature detection needs the tiny `detector` world without dragging the
+# browser-probe machinery in.
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen = { version = "0.60", default-features = false, features = ["macros"] }
+
+[build-dependencies]
+toml  = { version = "0.9", default-features = false, features = ["parse", "serde"] }
+serde = { version = "1", features = ["derive"] }

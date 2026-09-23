@@ -1,0 +1,53 @@
+# Hand-authored subfeature taxonomies for browser WIT packages whose
+# docstrings enumerate progressive growth layers. The auto-generator
+# (`scripts/gen-browser-catalog.mjs`) never touches this file.
+#
+# Each `[[subfeature-set]]` entry names a `package` (matching the
+# `package` field of a `[[browser]]` entry in `browser-features.toml`)
+# and lists the ordered `names` of its documented layers. Names are
+# stable slugs — never renumber, only append.
+#
+# Loaders' per-shim `probe()` functions in the polyfill layer report
+# subfeatures using these exact slugs. A slug listed here but absent
+# from a probe's response is treated as `browser-missing` on that
+# platform; a slug present in a probe's response but not listed here
+# is reported to the loader as an unknown-subfeature warning (the
+# taxonomy needs updating).
+
+# browser:webgpu — progressive layers documented at the top of
+# `wit/deps/browser-webgpu/webgpu.wit` in the WasmOS repo.
+[[subfeature-set]]
+package = "browser:webgpu@0.9.0"
+names = [
+    # v0.1 — the "triangle path": adapter, device, WGSL shader module,
+    # render pipeline with implicit layout, canvas context, per-frame
+    # texture + view, command encoder, render pass, submit.
+    "triangle",
+    # v0.2 — the "buffers layer": buffer resource + map-async, buffer
+    # descriptor, buffer-usage flags, map-mode, device.create-buffer,
+    # queue.write-buffer, copy-buffer-to-buffer / -texture.
+    "buffers",
+    # v0.3 — bind groups + explicit pipeline layouts (breaking against
+    # v0.2 because render-pipeline-descriptor grows a required layout
+    # field).
+    "bind-groups",
+    # v0.4 — vertex and index buffers wired into pipelines.
+    "vertex-index",
+    # v0.5 — textures beyond the swapchain + samplers.
+    "textures-samplers",
+    # v0.6 — depth/stencil, blend state, cull/front-face pipeline
+    # state.
+    "depth-stencil-blend",
+    # v0.7 — compute pipelines + render bundles.
+    "compute-bundles",
+    # v0.8 — the "polish batch": features/limits at device creation,
+    # adapter.info(), queue.on-submitted-work-done, present-mode on
+    # canvas configuration, compressed texture formats.
+    "polish",
+    # v0.9 — the "introspection batch": adapter.get-info() returning
+    # the full backend-type/adapter-type/vendor-id/device-id record,
+    # adapter.get-features() enumerating supported feature-name arms,
+    # adapter.get-limits() / device.get-limits() returning the full
+    # 32-field limits record.
+    "introspection",
+]

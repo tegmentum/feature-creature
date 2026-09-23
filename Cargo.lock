@@ -326,6 +326,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "feature-creature-browser-detector-component"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "toml",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "feature-creature-detector"
 version = "0.1.0"
 dependencies = [

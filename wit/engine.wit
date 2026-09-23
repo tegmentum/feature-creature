@@ -1,4 +1,4 @@
-package feature-creature:engine@0.1.0;
+package feature-creature:engine@0.2.0;
 
 /// Host-provided validation primitive. This is the sole capability the
 /// portable detector needs from its environment; everything else it can
@@ -30,10 +30,119 @@ interface environment {
     jspi: func() -> bool;
 }
 
-/// World for a core detector wrapped as a component.
+/// Browser-capability report — the export surface of the browser-detector
+/// component. Bundles the type taxonomy with the `detect-browser` function
+/// that produces a report against it, so downstream tools (and the imported
+/// `browser-probe` interface) can `use` the types from a single source
+/// without triggering a cross-import type-resolution path in wasm-cm's
+/// runtime-guest (`resolve_type_def` at the current milestone can follow
+/// `Origin::Definition` only, not `Origin::Import`, so the export function
+/// must be defined in the same interface that defines its return type).
+///
+/// Loaders (wasmbrowsers, wasmworkers, native embedders) consume the
+/// returned report to decide whether it is safe to instantiate a component
+/// whose imports reference a given `browser:*` package on this platform.
+interface browser-report {
+    /// Tri-state outcome for one catalog entry. The distinction between
+    /// `browser-missing` and `shim-missing` matters: a loader with a shim
+    /// but no backing API will bind the import and then trap on first call,
+    /// whereas a loader with no shim cannot bind the import at all — the
+    /// two failure modes need different loader responses (refuse, stub,
+    /// or degrade).
+    enum capability-state {
+        /// Backing browser API is present AND the loader ships a shim
+        /// for it. A component that imports this WIT package can be
+        /// instantiated safely.
+        available,
+        /// Loader ships a shim, but the browser lacks the underlying
+        /// API — instantiation would bind, then trap on first call.
+        browser-missing,
+        /// Loader has no shim registered for this package on this
+        /// platform — a component importing it must be refused,
+        /// stubbed, or degraded by the loader before instantiation.
+        shim-missing,
+    }
+
+    /// Optional per-method or per-layer sub-capability result. Used for
+    /// packages that grew incrementally in WasmOS's WIT lineage and whose
+    /// docstrings enumerate progressive layers (`browser:webgpu` v0.1–v0.9
+    /// is the canonical example: triangle-path, buffers, bind-groups,
+    /// vertex/index, textures/samplers, depth/stencil/blend, compute +
+    /// bundles, polish, introspection). Browsers ship these piecewise, so
+    /// interface-level detection is insufficient for surfaces of that
+    /// shape.
+    record subfeature-result {
+        /// Stable slug matching a `[browser.<pkg>.subfeatures.<name>]`
+        /// entry in the guest-side catalog (`features.toml`).
+        name: string,
+        state: capability-state,
+    }
+
+    /// Result of probing one browser WIT package. `subfeatures` is empty
+    /// for packages that expose no progressive layering (`browser:fetch`,
+    /// `browser:console`, etc.).
+    record capability-result {
+        /// WIT package identifier as it appears in `wit/deps/browser-*/`,
+        /// e.g. `browser:webgpu@0.9.0`. Unversioned surfaces omit the `@`
+        /// (e.g. `browser:fetch`). Escaped as `%package` because `package`
+        /// is a WIT keyword; the wire discriminant remains `"package"`.
+        %package: string,
+        state: capability-state,
+        subfeatures: list<subfeature-result>,
+    }
+
+    /// Probe every browser WIT package the detector knows about and return
+    /// one result per catalog entry. Report order matches the guest-side
+    /// catalog (alphabetical by package name), so a diff between two runs
+    /// on the same guest wasm is stable.
+    detect-browser: func() -> list<capability-result>;
+}
+
+/// Per-platform browser capability probe, implemented by the loader
+/// (wasmbrowsers, wasmworkers, native embedders). The loader dispatches
+/// each call to a per-shim `probe()` function that lives next to the
+/// polyfill entrypoint for that package. A package the loader has no
+/// registered probe for returns `capability-state::shim-missing`
+/// unconditionally — that state is synthesised by the loader, never
+/// returned by a probe function.
+interface browser-probe {
+    use browser-report.{capability-result};
+    /// Probe one WIT package by identifier. `pkg` MUST match the form
+    /// used in the guest-side catalog (`browser:webgpu@0.9.0`,
+    /// `browser:fetch`, etc.). Parameter is spelled `pkg` because
+    /// `package` is a WIT keyword.
+    probe: func(pkg: string) -> capability-result;
+}
+
+/// World for a core-only detector wrapped as a component. Unchanged from
+/// 0.1.0 apart from the package version bump — kept as its own world so
+/// native embedders that only need core-wasm feature detection can target
+/// a minimal import surface.
 world detector {
     import engine;
     /// Detect all core-engine features and return a little-endian bitmap
     /// indexed by the `bit` field in `features.toml`.
+    export detect-core: func() -> list<u8>;
+}
+
+/// World for a browser-capability detector. The guest iterates its
+/// bundled catalog (the `[browser.*]` section of `features.toml`) and
+/// calls `browser-probe.probe` once per entry; the returned `browser-report`
+/// interface exposes `detect-browser` alongside the type taxonomy so the
+/// export function and its return type are defined in the same origin,
+/// which the wasm-cm runtime-guest resolver requires at this milestone.
+world browser-detector {
+    import browser-probe;
+    export browser-report;
+}
+
+/// World combining core and browser detection — the shape a full loader
+/// (wasmbrowsers, wasmworkers) imports so it can build a complete
+/// CapabilitySet snapshot from one component instantiation.
+world full-detector {
+    import engine;
+    import environment;
+    import browser-probe;
+    export browser-report;
     export detect-core: func() -> list<u8>;
 }
