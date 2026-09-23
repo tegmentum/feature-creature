@@ -125,6 +125,15 @@
       }
       .pill.yes { background: var(--green-soft); color: var(--green-ink); }
       .pill.no  { background: var(--neutral-soft); color: var(--neutral-ink); }
+      .pill.available       { background: var(--green-soft); color: var(--green-ink); }
+      .pill.browser-missing { background: #f8e0e6; color: var(--danger); }
+      .pill.shim-missing    { background: var(--purple-soft); color: var(--purple); }
+      .feature.sub {
+        padding-left: 28px;
+        border-left: 3px solid var(--purple-line);
+        border-radius: 6px 10px 10px 6px;
+      }
+      .feature.sub .name { font-size: 0.8rem; color: var(--muted); }
       dl.env-info {
         margin: 0;
         padding: 14px 16px;
@@ -221,6 +230,24 @@
         <div id="env" class="grid"></div>
       </section>
 
+      <section id="browser-section" hidden>
+        <h2>Browser capability surface</h2>
+        <p class="blurb">
+          Every <code>browser:*</code> WIT package from the WasmOS lineage,
+          probed against this browser's API surface. Answers are tri-state:
+          <span class="pill available">available</span> means the browser
+          exposes the backing API and this page has a probe for it;
+          <span class="pill browser-missing">browser-missing</span> means
+          the probe ran and the API is confirmed absent; and
+          <span class="pill shim-missing">shim-missing</span> means no probe
+          is registered for that WIT surface (typically because it needs a
+          full JS implementer package to answer meaningfully). Rows with
+          progressive layers (e.g. <code>browser:webgpu</code>'s nine
+          documented growth stages) expand to per-layer results.
+        </p>
+        <div id="browser" class="grid"></div>
+      </section>
+
       <section id="ua-section" hidden>
         <h2>Browser</h2>
         <dl class="env-info">
@@ -248,6 +275,7 @@
 
     <script type="module">
       import { detect, WASM_UNSUPPORTED } from "./js/index.js";
+      import { detectBrowserCapabilities } from "./js/browser-report.js";
 
       const statusEl = document.getElementById("status");
 
@@ -255,6 +283,13 @@
         const el = document.createElement("span");
         el.className = "pill " + (value ? "yes" : "no");
         el.textContent = value ? "yes" : "no";
+        return el;
+      }
+
+      function tristatePill(state) {
+        const el = document.createElement("span");
+        el.className = "pill " + state;
+        el.textContent = state;
         return el;
       }
 
@@ -271,19 +306,50 @@
         }
       }
 
+      function renderBrowserReport(container, results) {
+        container.replaceChildren();
+        for (const r of results) {
+          const row = document.createElement("div");
+          row.className = "feature";
+          const label = document.createElement("span");
+          label.className = "name";
+          label.textContent = r.package_;
+          row.append(label, tristatePill(r.state));
+          container.appendChild(row);
+          for (const sub of r.subfeatures) {
+            const subRow = document.createElement("div");
+            subRow.className = "feature sub";
+            const subLabel = document.createElement("span");
+            subLabel.className = "name";
+            subLabel.textContent = sub.name;
+            subRow.append(subLabel, tristatePill(sub.state));
+            container.appendChild(subRow);
+          }
+        }
+      }
+
       function show(id) {
         document.getElementById(id).hidden = false;
       }
 
       try {
-        const result = await detect(fetch("./assets/detector.wasm"));
-        if (result === WASM_UNSUPPORTED) {
+        const [coreResult, browserResults] = await Promise.all([
+          detect(fetch("./assets/detector.wasm")),
+          detectBrowserCapabilities().catch((err) => {
+            // Browser section is additive — if the transpiled module or
+            // its imports fail, keep the core report visible.
+            console.error("browser-detector failed:", err);
+            return null;
+          }),
+        ]);
+
+        if (coreResult === WASM_UNSUPPORTED) {
           statusEl.className = "status error";
           statusEl.textContent =
             "This browser doesn't expose WebAssembly at all — no report possible.";
         } else {
-          const core = { ...result.core };
-          const env  = { ...result.environment };
+          const core = { ...coreResult.core };
+          const env  = { ...coreResult.environment };
 
           renderGroup(document.getElementById("core"), Object.entries(core));
           renderGroup(document.getElementById("env"),  Object.entries(env));
@@ -293,16 +359,37 @@
           document.getElementById("cores").textContent    =
             navigator.hardwareConcurrency ? String(navigator.hardwareConcurrency) : "—";
 
-          document.getElementById("json").textContent =
-            JSON.stringify({ core, environment: env }, null, 2);
+          const jsonPayload = { core, environment: env };
 
-          const values = [...Object.values(core), ...Object.values(env)];
-          const total = values.length;
-          const yes   = values.filter(Boolean).length;
+          const coreValues = [...Object.values(core), ...Object.values(env)];
+          const coreTotal  = coreValues.length;
+          const coreYes    = coreValues.filter(Boolean).length;
+
+          let browserSummary = "";
+          if (browserResults) {
+            renderBrowserReport(document.getElementById("browser"), browserResults);
+            const states = browserResults.map((r) => r.state);
+            const available = states.filter((s) => s === "available").length;
+            const browserMissing = states.filter((s) => s === "browser-missing").length;
+            const shimMissing = states.filter((s) => s === "shim-missing").length;
+            browserSummary =
+              ` · <span class="count">${browserResults.length}</span> browser packages: ` +
+              `<span class="count">${available}</span> available, ` +
+              `<span class="count">${browserMissing}</span> browser-missing, ` +
+              `<span class="count">${shimMissing}</span> shim-missing`;
+            jsonPayload.browser = browserResults;
+            show("browser-section");
+          }
+
+          document.getElementById("json").textContent =
+            JSON.stringify(jsonPayload, null, 2);
+
           statusEl.innerHTML =
-            `Probed <span class="count">${total}</span> capabilities — ` +
-            `<span class="count">${yes}</span> supported, ` +
-            `<span class="count">${total - yes}</span> not.`;
+            `Probed <span class="count">${coreTotal}</span> core capabilities — ` +
+            `<span class="count">${coreYes}</span> supported, ` +
+            `<span class="count">${coreTotal - coreYes}</span> not` +
+            browserSummary +
+            `.`;
 
           show("core-section");
           show("env-section");
