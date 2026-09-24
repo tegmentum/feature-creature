@@ -18,7 +18,12 @@
     },
     "browser:bluetooth": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "request-device": "browser-missing",
+        "get-availability": "browser-missing",
+        "get-devices": "browser-missing"
+      }
     },
     "browser:broadcast-channel": {
       "state": "available",
@@ -58,7 +63,7 @@
         "basic": "available",
         "get-random-values": "available",
         "random-uuid": "available",
-        "ed25519": "browser-missing"
+        "ed25519": "available"
       }
     },
     "browser:dom": {
@@ -111,7 +116,11 @@
     },
     "browser:hid": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "request-device": "browser-missing",
+        "get-devices": "browser-missing"
+      }
     },
     "browser:history": {
       "state": "available",
@@ -119,7 +128,10 @@
     },
     "browser:idle-detection": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "permission": "browser-missing"
+      }
     },
     "browser:indexeddb": {
       "state": "available",
@@ -141,7 +153,11 @@
     },
     "browser:media-session": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "action-handlers": "available",
+        "position-state": "available"
+      }
     },
     "browser:midi": {
       "state": "browser-missing",
@@ -196,7 +212,11 @@
     },
     "browser:serial": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "request-port": "browser-missing",
+        "get-ports": "browser-missing"
+      }
     },
     "browser:service-worker": {
       "state": "available",
@@ -213,7 +233,11 @@
     },
     "browser:speech-synthesis": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "voices-available": "available",
+        "boundary-events": "available"
+      }
     },
     "browser:storage": {
       "state": "available",
@@ -226,7 +250,11 @@
     },
     "browser:usb": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "request-device": "browser-missing",
+        "get-devices": "browser-missing"
+      }
     },
     "browser:vibration": {
       "state": "browser-missing",
@@ -252,7 +280,12 @@
     },
     "browser:web-transport": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "datagrams": "browser-missing",
+        "unidirectional-streams": "browser-missing",
+        "bidirectional-streams": "browser-missing"
+      }
     },
     "browser:webauthn": {
       "state": "available",

@@ -268,30 +268,55 @@ function probeWebauthn() {
   };
 }
 
-function probeCrypto() {
-  const names = ["basic", "get-random-values", "random-uuid", "ed25519"];
-  const c = g.crypto;
-  if (!c || !c.subtle) {
-    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
-  }
-  return {
-    state: "available",
-    subfeatures: {
-      basic: "available",
-      "get-random-values": typeof c.getRandomValues === "function" ? "available" : "browser-missing",
-      "random-uuid": typeof c.randomUUID === "function" ? "available" : "browser-missing",
-      // No cheap sync test for Ed25519 support — SubtleCrypto is
-      // async, so we probe the `supportedAlgorithms` sentinel Chrome
-      // exposes when available. Absent that, fall back to
-      // browser-missing; every engine that ships Ed25519 in subtle
-      // exposes it via `generateKey({ name: 'Ed25519' })` succeeding
-      // at await time, which the WIT-sync-declared probe can't do.
-      "ed25519":
-        typeof c.subtle.supportedAlgorithms === "function"
-          ? "available"
-          : "browser-missing",
-    },
+function makeCryptoProbe(asyncCache) {
+  return function probeCrypto() {
+    const names = ["basic", "get-random-values", "random-uuid", "ed25519"];
+    const c = g.crypto;
+    if (!c || !c.subtle) {
+      return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+    }
+    return {
+      state: "available",
+      subfeatures: {
+        basic: "available",
+        "get-random-values":
+          typeof c.getRandomValues === "function" ? "available" : "browser-missing",
+        "random-uuid": typeof c.randomUUID === "function" ? "available" : "browser-missing",
+        // Ed25519 is async-only — SubtleCrypto.generateKey returns a
+        // Promise, so a sync probe can't answer directly. The
+        // detectBrowserCapabilities() flow pre-awaits the check and
+        // hands us a cached boolean; that value is authoritative.
+        ed25519: asyncCache.ed25519 ? "available" : "browser-missing",
+      },
+    };
   };
+}
+
+/**
+ * Run every browser-side sub-feature probe whose answer requires an
+ * async underlying API. WIT declares `browser-probe.probe` as sync;
+ * we pre-compute the async signals before booting the wasm component
+ * and expose the results through a cache that the sync probes above
+ * close over.
+ */
+async function runAsyncSubfeatureProbes() {
+  const cache = { ed25519: false };
+  // Ed25519 in SubtleCrypto — try to generate an Ed25519 key pair. If
+  // the algorithm is unknown, the promise rejects synchronously with
+  // a `NotSupportedError`; if it's supported, we get a key pair back.
+  try {
+    if (g.crypto?.subtle?.generateKey) {
+      const kp = await g.crypto.subtle.generateKey(
+        { name: "Ed25519" },
+        false,
+        ["sign", "verify"],
+      );
+      cache.ed25519 = !!kp;
+    }
+  } catch {
+    // fall through — cache.ed25519 stays false
+  }
+  return cache;
 }
 
 function probeMedia() {
@@ -545,46 +570,217 @@ function probeWebsocket() {
   };
 }
 
-const SUBFEATURE_PROBES = {
-  "browser:webgpu@0.9.0": probeWebgpu,
-  "browser:service-worker": probeServiceWorker,
-  "browser:worker": probeWorker,
-  "browser:storage": probeStorage,
-  "browser:webauthn": probeWebauthn,
-  "browser:crypto": probeCrypto,
-  "browser:media": probeMedia,
-  "browser:performance": probePerformance,
-  "browser:web-audio": probeWebAudio,
-  "browser:webrtc": probeWebrtc,
-  "browser:fetch": probeFetch,
-  "browser:file-system": probeFileSystem,
-  "browser:indexeddb": probeIndexeddb,
-  "browser:notifications": probeNotifications,
-  "browser:websocket": probeWebsocket,
-};
+function probeBluetooth() {
+  const names = ["basic", "request-device", "get-availability", "get-devices"];
+  const bt = nav?.bluetooth;
+  if (!bt) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "request-device": typeof bt.requestDevice === "function" ? "available" : "browser-missing",
+      "get-availability": typeof bt.getAvailability === "function" ? "available" : "browser-missing",
+      "get-devices": typeof bt.getDevices === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeHid() {
+  const names = ["basic", "request-device", "get-devices"];
+  const h = nav?.hid;
+  if (!h) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "request-device": typeof h.requestDevice === "function" ? "available" : "browser-missing",
+      "get-devices": typeof h.getDevices === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeUsb() {
+  const names = ["basic", "request-device", "get-devices"];
+  const u = nav?.usb;
+  if (!u) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "request-device": typeof u.requestDevice === "function" ? "available" : "browser-missing",
+      "get-devices": typeof u.getDevices === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeSerial() {
+  const names = ["basic", "request-port", "get-ports"];
+  const s = nav?.serial;
+  if (!s) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "request-port": typeof s.requestPort === "function" ? "available" : "browser-missing",
+      "get-ports": typeof s.getPorts === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeIdleDetection() {
+  const names = ["basic", "permission"];
+  const ID = g.IdleDetector;
+  if (typeof ID !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      permission: typeof ID.requestPermission === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeMediaSession() {
+  const names = ["basic", "action-handlers", "position-state"];
+  const ms = nav?.mediaSession;
+  if (!ms) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "action-handlers": typeof ms.setActionHandler === "function" ? "available" : "browser-missing",
+      "position-state": typeof ms.setPositionState === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeSpeechSynthesis() {
+  const names = ["basic", "voices-available", "boundary-events"];
+  const ss = g.speechSynthesis;
+  if (!ss) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  // Voice list can be empty at page load until the async voiceschanged
+  // event fires; use presence-of-getVoices as a proxy and check the
+  // count. Zero voices at probe time still counts as basic-available.
+  let voiceCount = 0;
+  try {
+    const list = typeof ss.getVoices === "function" ? ss.getVoices() : [];
+    voiceCount = Array.isArray(list) ? list.length : 0;
+  } catch {
+    // fall through
+  }
+  let hasBoundary = false;
+  try {
+    const SSU = g.SpeechSynthesisUtterance;
+    hasBoundary =
+      typeof SSU === "function" &&
+      Object.getOwnPropertyDescriptor(SSU.prototype, "onboundary") !== undefined;
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "voices-available": voiceCount > 0 ? "available" : "browser-missing",
+      "boundary-events": hasBoundary ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeWebTransport() {
+  const names = [
+    "basic",
+    "datagrams",
+    "unidirectional-streams",
+    "bidirectional-streams",
+  ];
+  const WT = g.WebTransport;
+  if (typeof WT !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  let hasProto = false;
+  let hasDatagrams = false;
+  let hasUni = false;
+  let hasBi = false;
+  try {
+    const proto = WT.prototype;
+    hasProto = !!proto;
+    hasDatagrams =
+      proto && Object.getOwnPropertyDescriptor(proto, "datagrams") !== undefined;
+    hasUni =
+      proto && typeof proto.createUnidirectionalStream === "function";
+    hasBi = proto && typeof proto.createBidirectionalStream === "function";
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: hasProto ? "available" : "browser-missing",
+      datagrams: hasDatagrams ? "available" : "browser-missing",
+      "unidirectional-streams": hasUni ? "available" : "browser-missing",
+      "bidirectional-streams": hasBi ? "available" : "browser-missing",
+    },
+  };
+}
+
+function makeSubfeatureProbes(asyncCache) {
+  return {
+    "browser:webgpu@0.9.0": probeWebgpu,
+    "browser:service-worker": probeServiceWorker,
+    "browser:worker": probeWorker,
+    "browser:storage": probeStorage,
+    "browser:webauthn": probeWebauthn,
+    "browser:crypto": makeCryptoProbe(asyncCache),
+    "browser:media": probeMedia,
+    "browser:performance": probePerformance,
+    "browser:web-audio": probeWebAudio,
+    "browser:webrtc": probeWebrtc,
+    "browser:fetch": probeFetch,
+    "browser:file-system": probeFileSystem,
+    "browser:indexeddb": probeIndexeddb,
+    "browser:notifications": probeNotifications,
+    "browser:websocket": probeWebsocket,
+    "browser:bluetooth": probeBluetooth,
+    "browser:hid": probeHid,
+    "browser:usb": probeUsb,
+    "browser:serial": probeSerial,
+    "browser:idle-detection": probeIdleDetection,
+    "browser:media-session": probeMediaSession,
+    "browser:speech-synthesis": probeSpeechSynthesis,
+    "browser:web-transport": probeWebTransport,
+  };
+}
 
 // -------------------------------------------------------------------
 // The `browser-probe` interface implementation the wasm guest calls once
 // per catalog entry. Unknown packages return `shim-missing`; that's the
-// right signal for a WIT surface we don't have a check for yet.
+// right signal for a WIT surface we don't have a check for yet. Closed
+// over an async-cache built by `runAsyncSubfeatureProbes` so probes
+// that need async underlying APIs (Ed25519 in SubtleCrypto today) can
+// return an authoritative answer from a sync WIT call.
 // -------------------------------------------------------------------
-function probeImpl(pkg) {
-  const rich = SUBFEATURE_PROBES[pkg];
-  if (rich) {
-    const r = rich();
-    const subfeatures = r.subfeatures
-      ? Object.entries(r.subfeatures).map(([name, state]) => ({ name, state }))
-      : [];
-    return { package_: pkg, state: r.state, subfeatures };
-  }
-  const check = BUILTIN_PROBES[pkg];
-  if (!check) {
-    return { package_: pkg, state: "shim-missing", subfeatures: [] };
-  }
-  return {
-    package_: pkg,
-    state: check() ? "available" : "browser-missing",
-    subfeatures: [],
+function makeProbeImpl(subfeatureProbes) {
+  return function probeImpl(pkg) {
+    const rich = subfeatureProbes[pkg];
+    if (rich) {
+      const r = rich();
+      const subfeatures = r.subfeatures
+        ? Object.entries(r.subfeatures).map(([name, state]) => ({ name, state }))
+        : [];
+      return { package_: pkg, state: r.state, subfeatures };
+    }
+    const check = BUILTIN_PROBES[pkg];
+    if (!check) {
+      return { package_: pkg, state: "shim-missing", subfeatures: [] };
+    }
+    return {
+      package_: pkg,
+      state: check() ? "available" : "browser-missing",
+      subfeatures: [],
+    };
   };
 }
 
@@ -611,9 +807,15 @@ function probeImpl(pkg) {
  * }>}
  */
 export async function detectBrowserCapabilities() {
-  // Cache the async environment probes before boot so the sync
-  // wrappers below can answer without suspending.
-  const envCache = await detectEnvironment();
+  // Pre-run every async signal we need before booting the component:
+  //   1. The six environment probes (SharedArrayBuffer, JSPI, etc.).
+  //   2. Async sub-feature signals (Ed25519 SubtleCrypto today) that
+  //      the WIT declares as sync but need an actual `await` on the
+  //      underlying API to answer honestly.
+  const [envCache, asyncSubCache] = await Promise.all([
+    detectEnvironment(),
+    runAsyncSubfeatureProbes(),
+  ]);
 
   const environmentImpls = {
     "shared-memory": () => !!envCache["shared-memory"],
@@ -624,8 +826,11 @@ export async function detectBrowserCapabilities() {
     jspi: () => !!envCache["jspi"],
   };
 
+  const subfeatureProbes = makeSubfeatureProbes(asyncSubCache);
+  const probe = makeProbeImpl(subfeatureProbes);
+
   const exp = await instantiate({
-    [BROWSER_PROBE_IFACE]: { probe: probeImpl },
+    [BROWSER_PROBE_IFACE]: { probe },
     [ENVIRONMENT_IFACE]: environmentImpls,
   });
   const browser = exp[BROWSER_REPORT_IFACE]["detect-browser"]();

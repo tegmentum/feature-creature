@@ -2,4 +2,4 @@
 # Verified by scripts/check-transpile-drift.mjs; regenerated alongside
 # the .mjs whenever the WIT or the catalog changes.
 transpile 4cd558f64fb5a1f4a80a078354a46786ea0a2b7fd3fc222408884021c89474ec
-sources   20bfccbe9581089590f1bb02962f39435d1e64b603d4b1149091ac3f8447bff9
+sources   3220d46c32395b887cb9ccda8947d1e9e894dca2daffe2803030e5ca62d0620a

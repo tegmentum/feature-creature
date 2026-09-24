@@ -14,6 +14,108 @@
 # is reported to the loader as an unknown-subfeature warning (the
 # taxonomy needs updating).
 
+# browser:bluetooth — Web Bluetooth. Chromium-only cluster. All four
+# layers move together on that engine; the whole package reports
+# browser-missing everywhere else.
+[[subfeature-set]]
+package = "browser:bluetooth"
+names = [
+    # `navigator.bluetooth` presence.
+    "basic",
+    # `navigator.bluetooth.requestDevice(filters)` — interactive picker.
+    "request-device",
+    # `navigator.bluetooth.getAvailability()` — adapter presence.
+    "get-availability",
+    # `navigator.bluetooth.getDevices()` — persisted device list.
+    "get-devices",
+]
+
+# browser:hid — WebHID. Chromium-only.
+[[subfeature-set]]
+package = "browser:hid"
+names = [
+    "basic",
+    "request-device",
+    "get-devices",
+]
+
+# browser:usb — WebUSB. Chromium-only.
+[[subfeature-set]]
+package = "browser:usb"
+names = [
+    "basic",
+    "request-device",
+    "get-devices",
+]
+
+# browser:serial — WebSerial. Chromium-only.
+[[subfeature-set]]
+package = "browser:serial"
+names = [
+    "basic",
+    "request-port",
+    "get-ports",
+]
+
+# browser:idle-detection — Idle Detection API. Chromium-only. `basic`
+# (IdleDetector constructor) tracks the API; `permission` is the
+# static `IdleDetector.requestPermission()` gate.
+[[subfeature-set]]
+package = "browser:idle-detection"
+names = [
+    "basic",
+    "permission",
+]
+
+# browser:media-session — Media Session API. All three ship the base
+# navigator.mediaSession surface; `set-position-state` and
+# `set-microphone-active` (part of Screen Capture integration) are
+# newer additions that ship incrementally.
+[[subfeature-set]]
+package = "browser:media-session"
+names = [
+    # `navigator.mediaSession` presence.
+    "basic",
+    # `mediaSession.setActionHandler(action, handler)` for play/pause
+    # / seek / stop / etc.
+    "action-handlers",
+    # `mediaSession.setPositionState({ duration, playbackRate,
+    # position })` — media scrubber support.
+    "position-state",
+]
+
+# browser:speech-synthesis — SpeechSynthesis. Base is universal; voice
+# count varies wildly across engines. `utterance-events` covers the
+# per-utterance boundary/mark event surface.
+[[subfeature-set]]
+package = "browser:speech-synthesis"
+names = [
+    # `speechSynthesis` global + `SpeechSynthesisUtterance`.
+    "basic",
+    # `speechSynthesis.getVoices()` returns a non-empty list.
+    "voices-available",
+    # `SpeechSynthesisUtterance.prototype.onboundary` presence — word
+    # / sentence boundary events during speaking.
+    "boundary-events",
+]
+
+# browser:web-transport — WebTransport. Base + datagrams + streams all
+# ship together on engines that ship the API (Chromium + Firefox);
+# WebKit doesn't yet.
+[[subfeature-set]]
+package = "browser:web-transport"
+names = [
+    # `WebTransport` constructor.
+    "basic",
+    # `WebTransport.prototype.datagrams` — unreliable, unordered
+    # datagram channels.
+    "datagrams",
+    # `createUnidirectionalStream` — one-way reliable ordered stream.
+    "unidirectional-streams",
+    # `createBidirectionalStream` — two-way reliable ordered stream.
+    "bidirectional-streams",
+]
+
 # browser:fetch — Fetch API tiers. Base surface + AbortSignal + keepalive
 # are universal on modern engines; streaming request body historically
 # only in Chromium; `priority` hint is recent and still shipping.

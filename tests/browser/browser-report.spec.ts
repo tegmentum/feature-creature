@@ -20,9 +20,12 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
 
   // The status line reads "Probed N core capabilities ... · M browser
   // packages: X available, Y browser-missing, Z shim-missing." once
-  // both detectors finish. Wait on that fingerprint.
+  // both detectors finish. Wait on that fingerprint. Timeout is
+  // generous because the async pre-compute step now calls
+  // `crypto.subtle.generateKey({ name: 'Ed25519' })` on every load —
+  // on Firefox that can take a few seconds under a cold test worker.
   const status = page.locator("#status");
-  await expect(status).toContainText("browser packages:", { timeout: 15_000 });
+  await expect(status).toContainText("browser packages:", { timeout: 30_000 });
 
   await expect(page.locator("#core-section")).toBeVisible();
   await expect(page.locator("#browser-section")).toBeVisible();
@@ -145,6 +148,14 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
     "browser:indexeddb",
     "browser:notifications",
     "browser:websocket",
+    "browser:bluetooth",
+    "browser:hid",
+    "browser:usb",
+    "browser:serial",
+    "browser:idle-detection",
+    "browser:media-session",
+    "browser:speech-synthesis",
+    "browser:web-transport",
   ]) {
     const r = byPkg[pkg];
     expect(r.subfeatures.length, `${pkg}.subfeatures`).toBeGreaterThan(0);
@@ -258,6 +269,39 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
     byPkg["browser:indexeddb"].subfeatures.find((s) => s.name === "observer")
       ?.state,
   ).toBe("browser-missing");
+
+  // The Chromium-only device-API cluster: Web Bluetooth, WebHID, WebUSB,
+  // Idle Detection are Chromium-only on the three tested engines. Web
+  // Serial has landed in Firefox too; WebTransport ships on Chromium
+  // and Firefox but not WebKit.
+  for (const pkg of [
+    "browser:bluetooth",
+    "browser:hid",
+    "browser:usb",
+    "browser:idle-detection",
+  ]) {
+    const expected = browserName === "chromium" ? "available" : "browser-missing";
+    expect(byPkg[pkg].state, pkg).toBe(expected);
+  }
+  if (browserName === "webkit") {
+    expect(byPkg["browser:serial"].state).toBe("browser-missing");
+    expect(byPkg["browser:web-transport"].state).toBe("browser-missing");
+  } else {
+    expect(byPkg["browser:serial"].state).toBe("available");
+    expect(byPkg["browser:web-transport"].state).toBe("available");
+  }
+
+  // Media Session is universal on all three. So is basic speech
+  // synthesis.
+  expect(byPkg["browser:media-session"].state).toBe("available");
+  expect(byPkg["browser:speech-synthesis"].state).toBe("available");
+
+  // Ed25519 pre-await now returns available on every current engine —
+  // the async pre-compute wired into detectBrowserCapabilities lifts
+  // the false browser-missing the sync-only probe previously reported.
+  expect(
+    byPkg["browser:crypto"].subfeatures.find((s) => s.name === "ed25519")?.state,
+  ).toBe("available");
 
   // Compact per-browser summary — becomes a stable diff surface across
   // Playwright versions as new APIs ship.

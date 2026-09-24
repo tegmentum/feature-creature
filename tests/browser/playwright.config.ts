@@ -9,7 +9,7 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 export default defineConfig({
   testDir: ".",
   fullyParallel: false,
-  timeout: 30_000,
+  timeout: 60_000,
   reporter: [["list"]],
   use: {
     baseURL: BASE_URL,
