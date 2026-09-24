@@ -4,6 +4,7 @@ members = [
     "crates/detector",
     "crates/detector-component",
     "crates/browser-detector-component",
+    "crates/full-detector-component",
     "crates/host-wasmtime",
 ]
 

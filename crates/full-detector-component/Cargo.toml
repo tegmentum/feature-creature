@@ -1,0 +1,22 @@
+[package]
+name        = "feature-creature-full-detector-component"
+version     = "0.1.0"
+edition.workspace     = true
+license.workspace     = true
+repository.workspace  = true
+
+# The `full-detector` world combines core-wasm feature detection with the
+# browser-capability detection axis, so a single component instantiation
+# produces both a core-feature bitmap and a browser-package tri-state
+# report. Loaders (wasmbrowsers, wasmworkers) target this shape when they
+# want one CapabilitySet snapshot per session instead of two.
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen = { version = "0.60", default-features = false, features = ["macros"] }
+
+[build-dependencies]
+wat  = "1.243"
+toml = { version = "0.9", default-features = false, features = ["parse", "serde"] }
+serde = { version = "1", features = ["derive"] }
