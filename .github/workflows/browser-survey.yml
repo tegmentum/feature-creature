@@ -1,0 +1,125 @@
+name: Browser survey
+
+# Continuous survey of what the three Playwright browsers (Chromium,
+# Firefox, WebKit) actually expose at the browser-detector's API
+# surface. Runs the full report against each browser and diffs the
+# normalised JSON snapshot against the committed baseline under
+# `tests/browser/baseline/`. A drift means an engine shipped or removed
+# a capability the catalog cares about since the baseline was last
+# blessed — the maintainer reviews, then re-blesses with
+# `node tests/browser/survey.mjs --bless`.
+#
+# Weekly on Sunday morning + on manual dispatch. Uses each week's
+# freshly-installed Playwright browser rev so genuine upstream drift
+# shows up here.
+
+on:
+  schedule:
+    - cron: "23 6 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  survey:
+    name: cross-browser survey
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust (stable, +wasm32)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Playwright + browsers
+        working-directory: tests/browser
+        run: |
+          pnpm install
+          pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Assemble _site
+        working-directory: tests/browser
+        run: node assemble-site.mjs
+
+      - name: Run the survey
+        id: survey
+        working-directory: tests/browser
+        continue-on-error: true
+        run: node survey.mjs
+
+      - name: Upload snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-survey-snapshots
+          path: tests/browser/baseline/
+          retention-days: 30
+
+      - name: Open a drift issue
+        if: steps.survey.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Browser survey drift detected";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `The scheduled browser survey found that at least one Playwright browser`,
+              `now reports a different capability set than the checked-in baseline.`,
+              ``,
+              `Run: ${runUrl}`,
+              ``,
+              `To bless the new state after review:`,
+              "```",
+              "cd tests/browser",
+              "node survey.mjs --bless",
+              "git add baseline/",
+              "git commit -m 'chore(survey): refresh browser capability baselines'",
+              "```",
+              ``,
+              `The upload artifact for this run has the current snapshots so you can`,
+              `diff without re-running Playwright locally.`,
+              ``,
+              `See the run log for a per-line JSON diff of what shifted.`,
+            ].join("\n");
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "browser-survey",
+            });
+            if (existing.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["browser-survey", "chore"],
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing[0].number,
+                body: `New drift observed at run ${runUrl}.`,
+              });
+            }
+
+      - name: Fail the job if drift was detected
+        if: steps.survey.outcome == 'failure'
+        run: exit 1

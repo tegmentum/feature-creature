@@ -14,6 +14,101 @@
 # is reported to the loader as an unknown-subfeature warning (the
 # taxonomy needs updating).
 
+# browser:fetch — Fetch API tiers. Base surface + AbortSignal + keepalive
+# are universal on modern engines; streaming request body historically
+# only in Chromium; `priority` hint is recent and still shipping.
+[[subfeature-set]]
+package = "browser:fetch"
+names = [
+    # `fetch` function.
+    "basic",
+    # `AbortSignal` / `AbortController` for request cancellation.
+    "abort-signal",
+    # Request body as `ReadableStream` — real streaming upload.
+    # Chromium-only for a long time; still not universal.
+    "streaming-request",
+    # `{ keepalive: true }` option — small requests that outlive the
+    # page (analytics beacons, unload events).
+    "keepalive",
+    # `{ priority: 'high' | 'low' | 'auto' }` — Fetch Priority hint.
+    "priority",
+]
+
+# browser:file-system — File System Access API. OPFS
+# (`navigator.storage.getDirectory`) is universal on modern engines,
+# but the three "show*Picker" entry points are Chromium-only.
+# `createSyncAccessHandle` is workers-only for many years — now shipping
+# in Chromium + Firefox + WebKit.
+[[subfeature-set]]
+package = "browser:file-system"
+names = [
+    # `navigator.storage.getDirectory()` — Origin Private File System.
+    "basic",
+    # `showOpenFilePicker` — user-visible file open dialog. Chromium.
+    "picker",
+    # `showSaveFilePicker` — user-visible file save dialog. Chromium.
+    "save-picker",
+    # `showDirectoryPicker` — user-visible directory picker. Chromium.
+    "directory-picker",
+    # `FileSystemFileHandle.createSyncAccessHandle` — workers-only
+    # synchronous handle for random-access I/O.
+    "sync-access-handle",
+]
+
+# browser:indexeddb — IndexedDB modern extensions. Base surface is
+# universal. Recent additions: transaction.commit() (universal now),
+# transaction durability option (Chromium-first), IDBObserver (no
+# engine ships it yet).
+[[subfeature-set]]
+package = "browser:indexeddb"
+names = [
+    # `indexedDB` global + `open`.
+    "basic",
+    # `IDBTransaction.commit()` for explicit commit control.
+    "explicit-commit",
+    # `{ durability: 'strict' | 'relaxed' }` option on transactions.
+    "durability",
+    # `IDBObserver` — no engine ships this yet; here for future.
+    "observer",
+]
+
+# browser:notifications — Notification API tiers. Base constructor is
+# universal on modern engines; the richer options (actions, badge,
+# image) discriminate — historically Chromium only.
+[[subfeature-set]]
+package = "browser:notifications"
+names = [
+    # `Notification` constructor.
+    "basic",
+    # `Notification.maxActions` presence — signals actions button
+    # support in this engine's notification surface.
+    "actions",
+    # Notification badge — badging option in the constructor.
+    "badge",
+    # Notification image — image option.
+    "image",
+    # Persistent notifications via ServiceWorkerRegistration.showNotification.
+    "persistent",
+]
+
+# browser:websocket — WebSocket base surface + the streams-based
+# `WebSocketStream` extension. Base is universal on modern engines;
+# `WebSocketStream` is a Chromium-only extension for backpressure-aware
+# streaming.
+[[subfeature-set]]
+package = "browser:websocket"
+names = [
+    # `WebSocket` constructor.
+    "basic",
+    # `binaryType` property on WebSocket instances (defaults to
+    # `blob`; `arraybuffer` for typed-array frames). Universal on
+    # modern engines.
+    "binary-type",
+    # `WebSocketStream` constructor — streams-based API with
+    # backpressure. Chromium-only.
+    "streams",
+]
+
 # browser:crypto — WebCrypto tiers. Base surface is universal; UUID
 # generation and Ed25519 signing/verification are newer additions that
 # ship incrementally across engines.

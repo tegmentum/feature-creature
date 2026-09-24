@@ -140,6 +140,11 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
     "browser:performance",
     "browser:web-audio",
     "browser:webrtc",
+    "browser:fetch",
+    "browser:file-system",
+    "browser:indexeddb",
+    "browser:notifications",
+    "browser:websocket",
   ]) {
     const r = byPkg[pkg];
     expect(r.subfeatures.length, `${pkg}.subfeatures`).toBeGreaterThan(0);
@@ -205,6 +210,54 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
       `crypto.${layer}`,
     ).toBe("available");
   }
+
+  // browser:file-system — the three "show*Picker" entry points are
+  // Chromium-only. Firefox and WebKit ship OPFS (`basic`) without
+  // pickers.
+  const fsSub = (name: string) =>
+    byPkg["browser:file-system"].subfeatures.find((s) => s.name === name)?.state;
+  expect(fsSub("basic")).toBe("available");
+  if (browserName === "chromium") {
+    expect(fsSub("picker")).toBe("available");
+    expect(fsSub("save-picker")).toBe("available");
+    expect(fsSub("directory-picker")).toBe("available");
+  } else {
+    expect(fsSub("picker")).toBe("browser-missing");
+    expect(fsSub("save-picker")).toBe("browser-missing");
+    expect(fsSub("directory-picker")).toBe("browser-missing");
+  }
+
+  // browser:websocket — `WebSocketStream` is Chromium-only for
+  // backpressure-aware streaming; Firefox and WebKit have base + binary
+  // type only.
+  const wsSub = (name: string) =>
+    byPkg["browser:websocket"].subfeatures.find((s) => s.name === name)?.state;
+  expect(wsSub("basic")).toBe("available");
+  expect(wsSub("binary-type")).toBe("available");
+  if (browserName === "chromium") {
+    expect(wsSub("streams")).toBe("available");
+  } else {
+    expect(wsSub("streams")).toBe("browser-missing");
+  }
+
+  // browser:notifications cascading discrimination — Chromium ships the
+  // richest set, Firefox omits badge + image, WebKit omits actions too.
+  // persistent (via ServiceWorker) is universal.
+  const notifSub = (name: string) =>
+    byPkg["browser:notifications"].subfeatures.find((s) => s.name === name)?.state;
+  expect(notifSub("basic")).toBe("available");
+  expect(notifSub("persistent")).toBe("available");
+  if (browserName === "webkit") {
+    expect(notifSub("actions")).toBe("browser-missing");
+  } else {
+    expect(notifSub("actions")).toBe("available");
+  }
+
+  // browser:indexeddb — no engine ships IDBObserver yet.
+  expect(
+    byPkg["browser:indexeddb"].subfeatures.find((s) => s.name === "observer")
+      ?.state,
+  ).toBe("browser-missing");
 
   // Compact per-browser summary — becomes a stable diff surface across
   // Playwright versions as new APIs ship.

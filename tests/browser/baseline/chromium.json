@@ -1,0 +1,306 @@
+{
+  "environment": {
+    "shared-memory": true,
+    "shared-memory-transferable": true,
+    "bigint-integration": true,
+    "js-string-builtins": true,
+    "streaming-compilation": true,
+    "jspi": true
+  },
+  "browser": {
+    "browser:animation": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:battery": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:bluetooth": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:broadcast-channel": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:cache": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:canvas@0.1.0": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:clipboard": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:console": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:contacts": {
+      "state": "browser-missing",
+      "subfeatures": {}
+    },
+    "browser:cookie-store": {
+      "state": "browser-missing",
+      "subfeatures": {}
+    },
+    "browser:credential-management": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:crypto": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "get-random-values": "available",
+        "random-uuid": "available",
+        "ed25519": "browser-missing"
+      }
+    },
+    "browser:dom": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:eme": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:events": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:fedcm": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:fetch": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "abort-signal": "available",
+        "streaming-request": "available",
+        "keepalive": "available",
+        "priority": "available"
+      }
+    },
+    "browser:file-system": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "picker": "available",
+        "save-picker": "available",
+        "directory-picker": "available",
+        "sync-access-handle": "browser-missing"
+      }
+    },
+    "browser:fullscreen": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:gamepad": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:geolocation": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:hid": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:history": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:idle-detection": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:indexeddb": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "explicit-commit": "available",
+        "durability": "available",
+        "observer": "browser-missing"
+      }
+    },
+    "browser:media": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "recorder": "available",
+        "get-user-media": "available",
+        "device-enumeration": "available"
+      }
+    },
+    "browser:media-session": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:midi": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:network-info": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:notifications": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "actions": "available",
+        "badge": "available",
+        "image": "browser-missing",
+        "persistent": "available"
+      }
+    },
+    "browser:payment": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:payment-handler": {
+      "state": "browser-missing",
+      "subfeatures": {}
+    },
+    "browser:performance": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "observer": "available",
+        "memory": "available",
+        "longtask": "available"
+      }
+    },
+    "browser:presentation": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:push": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:screen": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:sensor": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:serial": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:service-worker": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "sync": "available",
+        "periodic-sync": "available",
+        "push": "available"
+      }
+    },
+    "browser:speech-recognition": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:speech-synthesis": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:storage": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "estimate": "available",
+        "persist": "available",
+        "directory": "available"
+      }
+    },
+    "browser:usb": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:vibration": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:wake-lock": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:web-audio": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "worklet": "available",
+        "offline": "available",
+        "analyser": "available",
+        "spatial": "available"
+      }
+    },
+    "browser:web-locks": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:web-transport": {
+      "state": "available",
+      "subfeatures": {}
+    },
+    "browser:webauthn": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "conditional-mediation": "available",
+        "platform-auth": "available",
+        "client-capabilities": "available"
+      }
+    },
+    "browser:webgpu@0.9.0": {
+      "state": "available",
+      "subfeatures": {
+        "triangle": "available",
+        "buffers": "available",
+        "bind-groups": "available",
+        "vertex-index": "available",
+        "textures-samplers": "available",
+        "depth-stencil-blend": "available",
+        "compute-bundles": "available",
+        "polish": "available",
+        "introspection": "browser-missing"
+      }
+    },
+    "browser:webrtc": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "data-channel": "available",
+        "media-streams": "available",
+        "insertable-streams": "available"
+      }
+    },
+    "browser:websocket": {
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "binary-type": "available",
+        "streams": "available"
+      }
+    },
+    "browser:worker": {
+      "state": "available",
+      "subfeatures": {
+        "dedicated": "available",
+        "shared": "available",
+        "module": "available"
+      }
+    }
+  }
+}

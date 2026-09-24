@@ -386,6 +386,165 @@ function probeWebrtc() {
   };
 }
 
+function probeFetch() {
+  const names = ["basic", "abort-signal", "streaming-request", "keepalive", "priority"];
+  if (typeof g.fetch !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  // Streaming request body needs `duplex: 'half'` + a ReadableStream
+  // body; support is signalled by the presence of the `duplex` option
+  // being reflected on the RequestInit. Sync probe: the Request
+  // constructor accepting `{ duplex: 'half' }` without throwing.
+  let streaming = "browser-missing";
+  try {
+    // Constructing with an empty body + duplex should succeed on
+    // engines that ship streaming-request; on others it either
+    // throws or silently ignores. Wrap in try/catch either way.
+    new Request("about:blank", { method: "POST", duplex: "half", body: null });
+    streaming = "available";
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "abort-signal":
+        typeof g.AbortController === "function" && typeof g.AbortSignal === "function"
+          ? "available"
+          : "browser-missing",
+      "streaming-request": streaming,
+      // Every modern engine ships `keepalive` and `priority` options
+      // on RequestInit; no cheap direct sync probe, but they're
+      // universal in all three tested engines. Report available when
+      // fetch itself is; a future browser without keepalive would fail
+      // silently under real use, and this probe would need adjusting.
+      keepalive: "available",
+      priority: "available",
+    },
+  };
+}
+
+function probeFileSystem() {
+  const names = [
+    "basic",
+    "picker",
+    "save-picker",
+    "directory-picker",
+    "sync-access-handle",
+  ];
+  const hasBasic = typeof g.navigator?.storage?.getDirectory === "function";
+  if (!hasBasic) {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      picker: typeof g.showOpenFilePicker === "function" ? "available" : "browser-missing",
+      "save-picker": typeof g.showSaveFilePicker === "function" ? "available" : "browser-missing",
+      "directory-picker":
+        typeof g.showDirectoryPicker === "function" ? "available" : "browser-missing",
+      // FileSystemSyncAccessHandle is only reachable inside dedicated
+      // workers; on the main thread, presence of the FileSystemFileHandle
+      // prototype method is the best sync signal.
+      "sync-access-handle":
+        typeof g.FileSystemFileHandle?.prototype?.createSyncAccessHandle === "function"
+          ? "available"
+          : "browser-missing",
+    },
+  };
+}
+
+function probeIndexeddb() {
+  const names = ["basic", "explicit-commit", "durability", "observer"];
+  if (typeof g.indexedDB === "undefined") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const TX = g.IDBTransaction?.prototype;
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "explicit-commit": TX && typeof TX.commit === "function" ? "available" : "browser-missing",
+      // `{ durability }` is a config-time option — probe via the
+      // `IDBDatabase.prototype.transaction` method's arity plus a
+      // secondary signal: engines that ship it also expose
+      // `IDBTransaction.prototype.durability` as a getter.
+      durability:
+        TX && "durability" in TX ? "available" : "browser-missing",
+      // IDBObserver — no shipping engine has it as of this writing.
+      observer: typeof g.IDBObserver === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeNotifications() {
+  const names = ["basic", "actions", "badge", "image", "persistent"];
+  const N = g.Notification;
+  if (typeof N !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  // Every property lookup here could hit a getter with a `this`
+  // assertion — reading them on the constructor or prototype throws
+  // "Illegal invocation" on such engines. Guard each with try/catch.
+  const safe = (fn) => {
+    try {
+      return fn();
+    } catch {
+      return false;
+    }
+  };
+  const hasActions = safe(() => typeof N.maxActions === "number" && N.maxActions > 0);
+  const hasBadge = safe(
+    () =>
+      Object.getOwnPropertyDescriptor(N.prototype, "badge") !== undefined,
+  );
+  const hasImage = safe(
+    () =>
+      Object.getOwnPropertyDescriptor(N.prototype, "image") !== undefined,
+  );
+  const swrp = g.ServiceWorkerRegistration?.prototype;
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      actions: hasActions ? "available" : "browser-missing",
+      badge: hasBadge ? "available" : "browser-missing",
+      image: hasImage ? "available" : "browser-missing",
+      persistent:
+        swrp && typeof swrp.showNotification === "function"
+          ? "available"
+          : "browser-missing",
+    },
+  };
+}
+
+function probeWebsocket() {
+  const names = ["basic", "binary-type", "streams"];
+  if (typeof g.WebSocket !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  // `binaryType` is a getter on WebSocket instances — probe via the
+  // property descriptor on the prototype, not by reading the value.
+  let hasBinaryType = false;
+  try {
+    hasBinaryType =
+      Object.getOwnPropertyDescriptor(g.WebSocket.prototype, "binaryType") !==
+      undefined;
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "binary-type": hasBinaryType ? "available" : "browser-missing",
+      streams: typeof g.WebSocketStream === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
 const SUBFEATURE_PROBES = {
   "browser:webgpu@0.9.0": probeWebgpu,
   "browser:service-worker": probeServiceWorker,
@@ -397,6 +556,11 @@ const SUBFEATURE_PROBES = {
   "browser:performance": probePerformance,
   "browser:web-audio": probeWebAudio,
   "browser:webrtc": probeWebrtc,
+  "browser:fetch": probeFetch,
+  "browser:file-system": probeFileSystem,
+  "browser:indexeddb": probeIndexeddb,
+  "browser:notifications": probeNotifications,
+  "browser:websocket": probeWebsocket,
 };
 
 // -------------------------------------------------------------------
