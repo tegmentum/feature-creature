@@ -127,14 +127,19 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
     expect(["available", "browser-missing"]).toContain(sub("introspection"));
   }
 
-  // Sub-feature taxonomies beyond WebGPU. Each of these four packages
-  // has documented layers in `browser-subfeatures.toml`; each browser's
+  // Sub-feature taxonomies beyond WebGPU. Each of these packages has
+  // documented layers in `browser-subfeatures.toml`; each browser's
   // sub-feature answer should also be tri-state disciplined.
   for (const pkg of [
     "browser:service-worker",
     "browser:worker",
     "browser:storage",
     "browser:webauthn",
+    "browser:crypto",
+    "browser:media",
+    "browser:performance",
+    "browser:web-audio",
+    "browser:webrtc",
   ]) {
     const r = byPkg[pkg];
     expect(r.subfeatures.length, `${pkg}.subfeatures`).toBeGreaterThan(0);
@@ -168,6 +173,38 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
     byPkg["browser:worker"].subfeatures.find((s) => s.name === "dedicated")
       ?.state,
   ).toBe("available");
+
+  // browser:performance — `memory` (non-standard performance.memory)
+  // and `longtask` (PerformanceObserver "longtask" entry type) are
+  // Chromium-only historically. Firefox and WebKit ship neither.
+  const perfSub = (name: string) =>
+    byPkg["browser:performance"].subfeatures.find((s) => s.name === name)?.state;
+  expect(perfSub("basic")).toBe("available");
+  expect(perfSub("observer")).toBe("available");
+  if (browserName === "chromium") {
+    expect(perfSub("memory")).toBe("available");
+    expect(perfSub("longtask")).toBe("available");
+  } else {
+    expect(perfSub("memory")).toBe("browser-missing");
+    expect(perfSub("longtask")).toBe("browser-missing");
+  }
+
+  // browser:web-audio — every layer available on every current engine.
+  for (const layer of ["basic", "worklet", "offline", "analyser", "spatial"]) {
+    expect(
+      byPkg["browser:web-audio"].subfeatures.find((s) => s.name === layer)?.state,
+      `web-audio.${layer}`,
+    ).toBe("available");
+  }
+  // browser:crypto base surface + getRandomValues + randomUUID are
+  // universal; Ed25519 has no cheap sync detection today, so we don't
+  // assert on its value — only that it's a valid tri-state arm.
+  for (const layer of ["basic", "get-random-values", "random-uuid"]) {
+    expect(
+      byPkg["browser:crypto"].subfeatures.find((s) => s.name === layer)?.state,
+      `crypto.${layer}`,
+    ).toBe("available");
+  }
 
   // Compact per-browser summary — becomes a stable diff surface across
   // Playwright versions as new APIs ship.

@@ -268,12 +268,135 @@ function probeWebauthn() {
   };
 }
 
+function probeCrypto() {
+  const names = ["basic", "get-random-values", "random-uuid", "ed25519"];
+  const c = g.crypto;
+  if (!c || !c.subtle) {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "get-random-values": typeof c.getRandomValues === "function" ? "available" : "browser-missing",
+      "random-uuid": typeof c.randomUUID === "function" ? "available" : "browser-missing",
+      // No cheap sync test for Ed25519 support — SubtleCrypto is
+      // async, so we probe the `supportedAlgorithms` sentinel Chrome
+      // exposes when available. Absent that, fall back to
+      // browser-missing; every engine that ships Ed25519 in subtle
+      // exposes it via `generateKey({ name: 'Ed25519' })` succeeding
+      // at await time, which the WIT-sync-declared probe can't do.
+      "ed25519":
+        typeof c.subtle.supportedAlgorithms === "function"
+          ? "available"
+          : "browser-missing",
+    },
+  };
+}
+
+function probeMedia() {
+  const names = ["basic", "recorder", "get-user-media", "device-enumeration"];
+  const hasStream = typeof g.MediaStream === "function";
+  const md = g.navigator?.mediaDevices;
+  if (!hasStream && !md) {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: hasStream ? "available" : "browser-missing",
+      recorder: typeof g.MediaRecorder === "function" ? "available" : "browser-missing",
+      "get-user-media": typeof md?.getUserMedia === "function" ? "available" : "browser-missing",
+      "device-enumeration": typeof md?.enumerateDevices === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probePerformance() {
+  const names = ["basic", "observer", "memory", "longtask"];
+  const p = g.performance;
+  if (!p) {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const PO = g.PerformanceObserver;
+  const supported = PO?.supportedEntryTypes ?? [];
+  return {
+    state: "available",
+    subfeatures: {
+      basic: typeof p.now === "function" ? "available" : "browser-missing",
+      observer: typeof PO === "function" ? "available" : "browser-missing",
+      memory:
+        typeof p.memory !== "undefined" ? "available" : "browser-missing",
+      longtask:
+        Array.isArray(supported) && supported.includes("longtask")
+          ? "available"
+          : "browser-missing",
+    },
+  };
+}
+
+function probeWebAudio() {
+  const names = ["basic", "worklet", "offline", "analyser", "spatial"];
+  const AC = g.AudioContext ?? g.webkitAudioContext;
+  if (typeof AC !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      // `audioWorklet` is a getter on AudioContext instances that
+      // reads `this` — accessing it on the prototype throws "Illegal
+      // invocation". Check for the `AudioWorkletNode` global instead;
+      // every engine that ships worklet exposes this constructor.
+      worklet:
+        typeof g.AudioWorkletNode === "function"
+          ? "available"
+          : "browser-missing",
+      offline: typeof g.OfflineAudioContext === "function" ? "available" : "browser-missing",
+      analyser: typeof g.AnalyserNode === "function" ? "available" : "browser-missing",
+      spatial: typeof g.PannerNode === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeWebrtc() {
+  const names = ["basic", "data-channel", "media-streams", "insertable-streams"];
+  const PC = g.RTCPeerConnection;
+  if (typeof PC !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const md = g.navigator?.mediaDevices;
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "data-channel":
+        typeof g.RTCDataChannel === "function" ||
+        typeof PC.prototype?.createDataChannel === "function"
+          ? "available"
+          : "browser-missing",
+      "media-streams":
+        typeof md?.getUserMedia === "function" ? "available" : "browser-missing",
+      "insertable-streams":
+        typeof g.RTCRtpScriptTransform === "function"
+          ? "available"
+          : "browser-missing",
+    },
+  };
+}
+
 const SUBFEATURE_PROBES = {
   "browser:webgpu@0.9.0": probeWebgpu,
   "browser:service-worker": probeServiceWorker,
   "browser:worker": probeWorker,
   "browser:storage": probeStorage,
   "browser:webauthn": probeWebauthn,
+  "browser:crypto": probeCrypto,
+  "browser:media": probeMedia,
+  "browser:performance": probePerformance,
+  "browser:web-audio": probeWebAudio,
+  "browser:webrtc": probeWebrtc,
 };
 
 // -------------------------------------------------------------------

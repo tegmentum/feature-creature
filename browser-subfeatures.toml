@@ -14,6 +14,98 @@
 # is reported to the loader as an unknown-subfeature warning (the
 # taxonomy needs updating).
 
+# browser:crypto — WebCrypto tiers. Base surface is universal; UUID
+# generation and Ed25519 signing/verification are newer additions that
+# ship incrementally across engines.
+[[subfeature-set]]
+package = "browser:crypto"
+names = [
+    # `crypto` + `crypto.subtle` presence.
+    "basic",
+    # `crypto.getRandomValues(view)` — universally available.
+    "get-random-values",
+    # `crypto.randomUUID()` — newer than the base surface but now
+    # widely deployed.
+    "random-uuid",
+    # `crypto.subtle` support for Ed25519 sign / verify / generateKey.
+    # Very recent addition, ships incrementally.
+    "ed25519",
+]
+
+# browser:media — the getUserMedia + MediaStream + MediaRecorder trio.
+# Base MediaStream is available everywhere; MediaRecorder needs the
+# spec-defined recorder shape; getUserMedia needs the modern
+# navigator.mediaDevices surface; enumerateDevices is often gated on
+# permission.
+[[subfeature-set]]
+package = "browser:media"
+names = [
+    # `MediaStream` constructor.
+    "basic",
+    # `MediaRecorder` constructor.
+    "recorder",
+    # `navigator.mediaDevices.getUserMedia` presence.
+    "get-user-media",
+    # `navigator.mediaDevices.enumerateDevices` presence.
+    "device-enumeration",
+]
+
+# browser:performance — Performance API tiers. Base timing is universal;
+# `PerformanceObserver` is universal; `performance.memory` is Chromium-
+# only (non-standard); `longtask` observability was Chromium-only for
+# years and now ships more broadly.
+[[subfeature-set]]
+package = "browser:performance"
+names = [
+    # `performance.now` / `timeOrigin`.
+    "basic",
+    # `PerformanceObserver` constructor.
+    "observer",
+    # `performance.memory` — non-standard, historically Chromium-only.
+    "memory",
+    # LongTask API observability — `PerformanceObserver` for entry type
+    # `"longtask"`. Chromium-only for years, now shipping wider.
+    "longtask",
+]
+
+# browser:web-audio — AudioContext tiers. Base surface is universal on
+# modern engines; AudioWorklet is universal on modern engines but was
+# a real gap for years; OfflineAudioContext is universal; PannerNode
+# provides spatial audio.
+[[subfeature-set]]
+package = "browser:web-audio"
+names = [
+    # `AudioContext` constructor.
+    "basic",
+    # `AudioWorklet` — modern low-latency processing extension.
+    "worklet",
+    # `OfflineAudioContext` — non-realtime rendering.
+    "offline",
+    # `AnalyserNode` — FFT / time-domain analysis.
+    "analyser",
+    # `PannerNode` + `AudioListener` — 3D spatial audio.
+    "spatial",
+]
+
+# browser:webrtc — RTCPeerConnection tiers. Base peer connection +
+# data channel are universal on modern engines. Insertable Streams
+# (RTCRtpScriptTransform) is Chromium + Safari; Firefox historically
+# not. getUserMedia is gated on permission but the API surface itself
+# is universal.
+[[subfeature-set]]
+package = "browser:webrtc"
+names = [
+    # `RTCPeerConnection` constructor.
+    "basic",
+    # `RTCDataChannel` — either as constructor or via peer connection.
+    "data-channel",
+    # `navigator.mediaDevices.getUserMedia` presence (media stream feed).
+    "media-streams",
+    # `RTCRtpScriptTransform` — Insertable Streams for encoded
+    # media frames. Chromium + Safari ship it; Firefox historically not.
+    "insertable-streams",
+]
+
 # browser:service-worker — spec sub-capabilities. Background Sync,
 # Periodic Sync, and Push are separate APIs bolted onto ServiceWorker;
 # browsers ship them independently. Chromium ships all four today;
