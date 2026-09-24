@@ -10,7 +10,12 @@
   "browser": {
     "browser:animation": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "timeline": "available",
+        "keyframe-effect": "available",
+        "group-effects": "browser-missing"
+      }
     },
     "browser:battery": {
       "state": "available",
@@ -31,15 +36,33 @@
     },
     "browser:cache": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "open": "available",
+        "match": "available",
+        "keys": "available",
+        "delete": "available"
+      }
     },
     "browser:canvas@0.1.0": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "context-2d": "available",
+        "offscreen": "available",
+        "image-data": "available",
+        "blob-export": "available"
+      }
     },
     "browser:clipboard": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "read-text": "available",
+        "write-text": "available",
+        "read-items": "available",
+        "write-items": "available"
+      }
     },
     "browser:console": {
       "state": "available",
@@ -47,15 +70,31 @@
     },
     "browser:contacts": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "select": "browser-missing",
+        "get-properties": "browser-missing"
+      }
     },
     "browser:cookie-store": {
-      "state": "browser-missing",
-      "subfeatures": {}
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "get": "available",
+        "set": "available",
+        "delete": "available",
+        "change-events": "available"
+      }
     },
     "browser:credential-management": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "password-credential": "available",
+        "federated-credential": "available",
+        "store": "available",
+        "prevent-silent-access": "available"
+      }
     },
     "browser:crypto": {
       "state": "available",
@@ -68,19 +107,39 @@
     },
     "browser:dom": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "custom-elements": "available",
+        "shadow-dom": "available",
+        "form-associated": "available",
+        "popover": "available",
+        "dialog": "available"
+      }
     },
     "browser:eme": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "hdcp-policy": "available",
+        "persistent-license": "available"
+      }
     },
     "browser:events": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "custom-event": "available",
+        "abort-signal": "available",
+        "options-object": "available"
+      }
     },
     "browser:fedcm": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "active-mode": "available",
+        "disconnect": "available"
+      }
     },
     "browser:fetch": {
       "state": "available",
@@ -104,15 +163,28 @@
     },
     "browser:fullscreen": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "request-element": "available",
+        "orientation-lock": "available"
+      }
     },
     "browser:gamepad": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "vibration-actuator": "available",
+        "haptic-actuators": "browser-missing"
+      }
     },
     "browser:geolocation": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "get-current-position": "available",
+        "watch-position": "available",
+        "high-accuracy": "available"
+      }
     },
     "browser:hid": {
       "state": "available",
@@ -124,7 +196,12 @@
     },
     "browser:history": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "push-state": "available",
+        "replace-state": "available",
+        "navigation-api": "available"
+      }
     },
     "browser:idle-detection": {
       "state": "available",
@@ -161,11 +238,21 @@
     },
     "browser:midi": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "sysex": "available",
+        "software-synth": "available"
+      }
     },
     "browser:network-info": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "effective-type": "available",
+        "downlink": "available",
+        "rtt": "available",
+        "save-data": "available"
+      }
     },
     "browser:notifications": {
       "state": "available",
@@ -179,11 +266,21 @@
     },
     "browser:payment": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "can-make-payment": "available",
+        "show": "available",
+        "abort": "available",
+        "update-events": "available"
+      }
     },
     "browser:payment-handler": {
-      "state": "browser-missing",
-      "subfeatures": {}
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "user-hint": "available",
+        "instruments": "browser-missing"
+      }
     },
     "browser:performance": {
       "state": "available",
@@ -196,19 +293,45 @@
     },
     "browser:presentation": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "controller": "available",
+        "receiver": "available",
+        "default-request": "available"
+      }
     },
     "browser:push": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "subscribe": "available",
+        "get-subscription": "available",
+        "permission-state": "available",
+        "supported-encodings": "available"
+      }
     },
     "browser:screen": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "orientation": "available",
+        "capture": "available",
+        "multi-screen": "available"
+      }
     },
     "browser:sensor": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "accelerometer": "available",
+        "gyroscope": "available",
+        "linear-acceleration": "available",
+        "orientation": "available",
+        "absolute-orientation": "available",
+        "magnetometer": "browser-missing",
+        "ambient-light": "browser-missing",
+        "gravity": "available"
+      }
     },
     "browser:serial": {
       "state": "available",
@@ -229,7 +352,12 @@
     },
     "browser:speech-recognition": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "continuous": "available",
+        "interim-results": "available",
+        "grammars": "available"
+      }
     },
     "browser:speech-synthesis": {
       "state": "available",
@@ -262,7 +390,11 @@
     },
     "browser:wake-lock": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "screen-lock": "available",
+        "system-lock": "browser-missing"
+      }
     },
     "browser:web-audio": {
       "state": "available",
@@ -276,7 +408,13 @@
     },
     "browser:web-locks": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "request": "available",
+        "query": "available",
+        "if-available": "available",
+        "steal": "available"
+      }
     },
     "browser:web-transport": {
       "state": "available",

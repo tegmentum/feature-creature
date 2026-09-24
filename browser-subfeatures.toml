@@ -14,6 +14,327 @@
 # is reported to the loader as an unknown-subfeature warning (the
 # taxonomy needs updating).
 
+# browser:animation — Web Animations API. Base + keyframe-effect are
+# universal on modern engines; group effects (part of a later spec
+# proposal) don't ship anywhere yet.
+[[subfeature-set]]
+package = "browser:animation"
+names = [
+    # `Element.prototype.animate`.
+    "basic",
+    # `DocumentTimeline` constructor.
+    "timeline",
+    # `KeyframeEffect` constructor — reusable effect building block.
+    "keyframe-effect",
+    # `GroupEffect` — not shipping anywhere.
+    "group-effects",
+]
+
+# browser:cache — Cache API (CacheStorage).
+[[subfeature-set]]
+package = "browser:cache"
+names = ["basic", "open", "match", "keys", "delete"]
+
+# browser:canvas@0.1.0 — HTMLCanvasElement + 2D.
+[[subfeature-set]]
+package = "browser:canvas@0.1.0"
+names = [
+    # `HTMLCanvasElement` constructor.
+    "basic",
+    # `getContext('2d')`.
+    "context-2d",
+    # `OffscreenCanvas` constructor.
+    "offscreen",
+    # `ImageData` constructor.
+    "image-data",
+    # `canvas.toBlob()`.
+    "blob-export",
+]
+
+# browser:clipboard — Async Clipboard API.
+[[subfeature-set]]
+package = "browser:clipboard"
+names = [
+    "basic",
+    "read-text",
+    "write-text",
+    # Full read/write of ClipboardItem — rich clipboard content
+    # (Chromium ships this; Firefox and WebKit have text-only surfaces).
+    "read-items",
+    "write-items",
+]
+
+# browser:contacts — Contacts Picker API. Chromium-only, mobile-only in
+# practice.
+[[subfeature-set]]
+package = "browser:contacts"
+names = ["basic", "select", "get-properties"]
+
+# browser:cookie-store — async cookie API. Chromium-only.
+[[subfeature-set]]
+package = "browser:cookie-store"
+names = ["basic", "get", "set", "delete", "change-events"]
+
+# browser:credential-management — the Credential Management API base
+# surface (PasswordCredential, FederatedCredential, get/store/preventSilent).
+[[subfeature-set]]
+package = "browser:credential-management"
+names = [
+    "basic",
+    "password-credential",
+    "federated-credential",
+    "store",
+    "prevent-silent-access",
+]
+
+# browser:dom — a slice of DOM surface that's genuinely cross-browser-
+# discriminating. Custom Elements, Shadow DOM, form-associated custom
+# elements, popover / dialog, all ship differently.
+[[subfeature-set]]
+package = "browser:dom"
+names = [
+    "basic",
+    # `customElements.define`.
+    "custom-elements",
+    # `Element.prototype.attachShadow`.
+    "shadow-dom",
+    # `ElementInternals` for form-associated custom elements.
+    "form-associated",
+    # `HTMLElement.prototype.showPopover` — Popover API.
+    "popover",
+    # `HTMLDialogElement`.
+    "dialog",
+]
+
+# browser:eme — Encrypted Media Extensions.
+[[subfeature-set]]
+package = "browser:eme"
+names = [
+    # `navigator.requestMediaKeySystemAccess`.
+    "basic",
+    # `MediaKeys.prototype.getStatusForPolicy` — HDCP policy queries.
+    "hdcp-policy",
+    # `MediaKeys.prototype.createSession` with `persistent-license`.
+    "persistent-license",
+]
+
+# browser:events — DOM Events + additions. Base + CustomEvent are
+# universal; AbortSignal-as-event-signal is now widely shipping.
+[[subfeature-set]]
+package = "browser:events"
+names = [
+    "basic",
+    "custom-event",
+    # `addEventListener(..., { signal })` — AbortSignal integration.
+    "abort-signal",
+    # `{ passive, once, capture }` option object.
+    "options-object",
+]
+
+# browser:fedcm — Federated Credential Management. IdentityCredential
+# is the primary surface; the API has been Chromium-only historically.
+[[subfeature-set]]
+package = "browser:fedcm"
+names = [
+    "basic",
+    # `IdentityProvider` global — the active-mode surface.
+    "active-mode",
+    # `IdentityCredential.disconnect` — logout support.
+    "disconnect",
+]
+
+# browser:fullscreen — Fullscreen API + Screen Orientation Lock.
+[[subfeature-set]]
+package = "browser:fullscreen"
+names = [
+    # `document.exitFullscreen` presence.
+    "basic",
+    # `Element.prototype.requestFullscreen` (per-element).
+    "request-element",
+    # `screen.orientation.lock` — orientation locking during fullscreen.
+    "orientation-lock",
+]
+
+# browser:gamepad — Gamepad API. Base surface universal;
+# HapticActuator / vibrationActuator differ.
+[[subfeature-set]]
+package = "browser:gamepad"
+names = [
+    "basic",
+    # `Gamepad.prototype.vibrationActuator` — modern spec shape.
+    "vibration-actuator",
+    # Older `Gamepad.prototype.hapticActuators` array shape.
+    "haptic-actuators",
+]
+
+# browser:geolocation.
+[[subfeature-set]]
+package = "browser:geolocation"
+names = [
+    "basic",
+    "get-current-position",
+    "watch-position",
+    # `{ enableHighAccuracy: true }` option support (universal on
+    # engines that ship the API at all).
+    "high-accuracy",
+]
+
+# browser:history — History API + newer Navigation API.
+[[subfeature-set]]
+package = "browser:history"
+names = [
+    # `history` object presence.
+    "basic",
+    "push-state",
+    "replace-state",
+    # The Navigation API (`navigation` global) — Chromium-only.
+    "navigation-api",
+]
+
+# browser:midi — Web MIDI.
+[[subfeature-set]]
+package = "browser:midi"
+names = [
+    # `navigator.requestMIDIAccess` presence.
+    "basic",
+    # SysEx access — `requestMIDIAccess({ sysex: true })`.
+    "sysex",
+    # Software-synth support — `requestMIDIAccess({ software: true })`.
+    "software-synth",
+]
+
+# browser:network-info — Network Information API. Chromium + partial
+# Safari support.
+[[subfeature-set]]
+package = "browser:network-info"
+names = [
+    "basic",
+    "effective-type",
+    "downlink",
+    "rtt",
+    # `save-data` header hint.
+    "save-data",
+]
+
+# browser:payment — Payment Request API.
+[[subfeature-set]]
+package = "browser:payment"
+names = [
+    "basic",
+    "can-make-payment",
+    "show",
+    "abort",
+    # `PaymentRequestUpdateEvent` for dynamic total updates.
+    "update-events",
+]
+
+# browser:payment-handler — Payment Handler API (service-worker side
+# of Payment Request). Chromium-only.
+[[subfeature-set]]
+package = "browser:payment-handler"
+names = [
+    "basic",
+    "user-hint",
+    # PaymentInstruments.set/get/keys/has.
+    "instruments",
+]
+
+# browser:presentation — Presentation API. Chromium-only for
+# controllers; receiver side is Chromium-only too and requires a
+# separate context.
+[[subfeature-set]]
+package = "browser:presentation"
+names = [
+    "basic",
+    # `PresentationRequest` constructor.
+    "controller",
+    # `PresentationReceiver` — the presenting-tab side.
+    "receiver",
+    # `presentation.defaultRequest` — one-tap start.
+    "default-request",
+]
+
+# browser:push — Push API.
+[[subfeature-set]]
+package = "browser:push"
+names = [
+    "basic",
+    "subscribe",
+    "get-subscription",
+    # `PushManager.prototype.permissionState`.
+    "permission-state",
+    # `PushManager.supportedContentEncodings`.
+    "supported-encodings",
+]
+
+# browser:screen — Screen + Screen Capture + Multi-Screen Placement.
+[[subfeature-set]]
+package = "browser:screen"
+names = [
+    "basic",
+    "orientation",
+    # `navigator.mediaDevices.getDisplayMedia` — Screen Capture.
+    "capture",
+    # `window.getScreenDetails` — Multi-Screen Window Placement API.
+    "multi-screen",
+]
+
+# browser:sensor — Generic Sensor API. Chromium-only cluster.
+[[subfeature-set]]
+package = "browser:sensor"
+names = [
+    "basic",
+    "accelerometer",
+    "gyroscope",
+    "linear-acceleration",
+    "orientation",
+    "absolute-orientation",
+    "magnetometer",
+    "ambient-light",
+    "gravity",
+]
+
+# browser:speech-recognition — SpeechRecognition (webkit-prefixed in
+# WebKit and Chromium). Firefox ships no-prefix Recognition still
+# partially.
+[[subfeature-set]]
+package = "browser:speech-recognition"
+names = [
+    "basic",
+    # `continuous` toggle on the recognition instance.
+    "continuous",
+    # `interimResults` toggle.
+    "interim-results",
+    # `SpeechGrammarList` support.
+    "grammars",
+]
+
+# browser:wake-lock — Screen Wake Lock.
+[[subfeature-set]]
+package = "browser:wake-lock"
+names = [
+    # `navigator.wakeLock` presence.
+    "basic",
+    # `navigator.wakeLock.request('screen')` — the standard type.
+    "screen-lock",
+    # `navigator.wakeLock.request('system')` — non-standard proposal,
+    # never actually shipping in a stable release.
+    "system-lock",
+]
+
+# browser:web-locks — Web Locks API.
+[[subfeature-set]]
+package = "browser:web-locks"
+names = [
+    "basic",
+    "request",
+    "query",
+    # `{ ifAvailable: true }` — non-blocking acquire.
+    "if-available",
+    # `{ steal: true }` — preempt existing holder.
+    "steal",
+]
+
 # browser:bluetooth — Web Bluetooth. Chromium-only cluster. All four
 # layers move together on that engine; the whole package reports
 # browser-missing everywhere else.

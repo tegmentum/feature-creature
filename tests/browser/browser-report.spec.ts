@@ -156,6 +156,23 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
     "browser:media-session",
     "browser:speech-synthesis",
     "browser:web-transport",
+    "browser:animation",
+    "browser:cache",
+    "browser:canvas@0.1.0",
+    "browser:clipboard",
+    "browser:cookie-store",
+    "browser:credential-management",
+    "browser:dom",
+    "browser:eme",
+    "browser:events",
+    "browser:fullscreen",
+    "browser:gamepad",
+    "browser:geolocation",
+    "browser:history",
+    "browser:push",
+    "browser:screen",
+    "browser:wake-lock",
+    "browser:web-locks",
   ]) {
     const r = byPkg[pkg];
     expect(r.subfeatures.length, `${pkg}.subfeatures`).toBeGreaterThan(0);
@@ -302,6 +319,59 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
   expect(
     byPkg["browser:crypto"].subfeatures.find((s) => s.name === "ed25519")?.state,
   ).toBe("available");
+
+  // browser:dom — Popover + Dialog + custom elements + shadow DOM are
+  // universal on modern engines.
+  const domSub = (name: string) =>
+    byPkg["browser:dom"].subfeatures.find((s) => s.name === name)?.state;
+  for (const layer of ["basic", "custom-elements", "shadow-dom", "popover", "dialog"]) {
+    expect(domSub(layer), `dom.${layer}`).toBe("available");
+  }
+
+  // Chromium-only clusters:
+  // - browser:sensor, browser:network-info, browser:payment,
+  //   browser:payment-handler, browser:presentation are Chromium-only.
+  // - browser:contacts is Chromium-only AND mobile-only (Playwright's
+  //   Chromium desktop doesn't ship it), so it should be
+  //   browser-missing across all three engines.
+  for (const pkg of [
+    "browser:network-info",
+    "browser:payment",
+    "browser:payment-handler",
+    "browser:presentation",
+    "browser:sensor",
+  ]) {
+    const expected = browserName === "chromium" ? "available" : "browser-missing";
+    expect(byPkg[pkg].state, pkg).toBe(expected);
+  }
+  expect(byPkg["browser:contacts"].state).toBe("browser-missing");
+  // FedCM — Chromium-only across the three Playwright engines today.
+  expect(byPkg["browser:fedcm"].state).toBe(
+    browserName === "chromium" ? "available" : "browser-missing",
+  );
+  // MIDI — Chromium + Firefox, not WebKit.
+  expect(byPkg["browser:midi"].state).toBe(
+    browserName === "webkit" ? "browser-missing" : "available",
+  );
+
+  // Cross-engine baselines: cache, clipboard, geolocation, cookie-store,
+  // web-locks, events, fullscreen, canvas, animation, history, screen
+  // are all universal on the three engines.
+  for (const pkg of [
+    "browser:cache",
+    "browser:clipboard",
+    "browser:geolocation",
+    "browser:cookie-store",
+    "browser:web-locks",
+    "browser:events",
+    "browser:fullscreen",
+    "browser:canvas@0.1.0",
+    "browser:animation",
+    "browser:history",
+    "browser:screen",
+  ]) {
+    expect(byPkg[pkg].state, pkg).toBe("available");
+  }
 
   // Compact per-browser summary — becomes a stable diff surface across
   // Playwright versions as new APIs ship.

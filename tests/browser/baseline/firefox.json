@@ -10,7 +10,12 @@
   "browser": {
     "browser:animation": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "timeline": "available",
+        "keyframe-effect": "available",
+        "group-effects": "browser-missing"
+      }
     },
     "browser:battery": {
       "state": "browser-missing",
@@ -31,15 +36,33 @@
     },
     "browser:cache": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "open": "available",
+        "match": "available",
+        "keys": "available",
+        "delete": "available"
+      }
     },
     "browser:canvas@0.1.0": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "context-2d": "available",
+        "offscreen": "available",
+        "image-data": "available",
+        "blob-export": "available"
+      }
     },
     "browser:clipboard": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "read-text": "available",
+        "write-text": "available",
+        "read-items": "available",
+        "write-items": "available"
+      }
     },
     "browser:console": {
       "state": "available",
@@ -47,15 +70,31 @@
     },
     "browser:contacts": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "select": "browser-missing",
+        "get-properties": "browser-missing"
+      }
     },
     "browser:cookie-store": {
-      "state": "browser-missing",
-      "subfeatures": {}
+      "state": "available",
+      "subfeatures": {
+        "basic": "available",
+        "get": "available",
+        "set": "available",
+        "delete": "available",
+        "change-events": "available"
+      }
     },
     "browser:credential-management": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "password-credential": "browser-missing",
+        "federated-credential": "browser-missing",
+        "store": "available",
+        "prevent-silent-access": "available"
+      }
     },
     "browser:crypto": {
       "state": "available",
@@ -68,19 +107,39 @@
     },
     "browser:dom": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "custom-elements": "available",
+        "shadow-dom": "available",
+        "form-associated": "available",
+        "popover": "available",
+        "dialog": "available"
+      }
     },
     "browser:eme": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "hdcp-policy": "available",
+        "persistent-license": "available"
+      }
     },
     "browser:events": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "custom-event": "available",
+        "abort-signal": "available",
+        "options-object": "available"
+      }
     },
     "browser:fedcm": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "active-mode": "browser-missing",
+        "disconnect": "browser-missing"
+      }
     },
     "browser:fetch": {
       "state": "available",
@@ -104,15 +163,28 @@
     },
     "browser:fullscreen": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "request-element": "available",
+        "orientation-lock": "available"
+      }
     },
     "browser:gamepad": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "vibration-actuator": "browser-missing",
+        "haptic-actuators": "available"
+      }
     },
     "browser:geolocation": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "get-current-position": "available",
+        "watch-position": "available",
+        "high-accuracy": "available"
+      }
     },
     "browser:hid": {
       "state": "browser-missing",
@@ -124,7 +196,12 @@
     },
     "browser:history": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "push-state": "available",
+        "replace-state": "available",
+        "navigation-api": "available"
+      }
     },
     "browser:idle-detection": {
       "state": "browser-missing",
@@ -161,11 +238,21 @@
     },
     "browser:midi": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "sysex": "available",
+        "software-synth": "available"
+      }
     },
     "browser:network-info": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "effective-type": "browser-missing",
+        "downlink": "browser-missing",
+        "rtt": "browser-missing",
+        "save-data": "browser-missing"
+      }
     },
     "browser:notifications": {
       "state": "available",
@@ -179,11 +266,21 @@
     },
     "browser:payment": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "can-make-payment": "browser-missing",
+        "show": "browser-missing",
+        "abort": "browser-missing",
+        "update-events": "browser-missing"
+      }
     },
     "browser:payment-handler": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "user-hint": "browser-missing",
+        "instruments": "browser-missing"
+      }
     },
     "browser:performance": {
       "state": "available",
@@ -196,19 +293,45 @@
     },
     "browser:presentation": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "controller": "browser-missing",
+        "receiver": "browser-missing",
+        "default-request": "browser-missing"
+      }
     },
     "browser:push": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "subscribe": "available",
+        "get-subscription": "available",
+        "permission-state": "available",
+        "supported-encodings": "available"
+      }
     },
     "browser:screen": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "orientation": "available",
+        "capture": "available",
+        "multi-screen": "browser-missing"
+      }
     },
     "browser:sensor": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "accelerometer": "browser-missing",
+        "gyroscope": "browser-missing",
+        "linear-acceleration": "browser-missing",
+        "orientation": "browser-missing",
+        "absolute-orientation": "browser-missing",
+        "magnetometer": "browser-missing",
+        "ambient-light": "browser-missing",
+        "gravity": "browser-missing"
+      }
     },
     "browser:serial": {
       "state": "available",
@@ -229,7 +352,12 @@
     },
     "browser:speech-recognition": {
       "state": "browser-missing",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "browser-missing",
+        "continuous": "browser-missing",
+        "interim-results": "browser-missing",
+        "grammars": "browser-missing"
+      }
     },
     "browser:speech-synthesis": {
       "state": "available",
@@ -262,7 +390,11 @@
     },
     "browser:wake-lock": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "screen-lock": "available",
+        "system-lock": "browser-missing"
+      }
     },
     "browser:web-audio": {
       "state": "available",
@@ -276,7 +408,13 @@
     },
     "browser:web-locks": {
       "state": "available",
-      "subfeatures": {}
+      "subfeatures": {
+        "basic": "available",
+        "request": "available",
+        "query": "available",
+        "if-available": "available",
+        "steal": "available"
+      }
     },
     "browser:web-transport": {
       "state": "available",

@@ -726,6 +726,564 @@ function probeWebTransport() {
   };
 }
 
+function probeAnimation() {
+  const names = ["basic", "timeline", "keyframe-effect", "group-effects"];
+  const El = g.Element;
+  const hasBasic = typeof El?.prototype?.animate === "function";
+  if (!hasBasic) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      timeline: typeof g.DocumentTimeline === "function" ? "available" : "browser-missing",
+      "keyframe-effect": typeof g.KeyframeEffect === "function" ? "available" : "browser-missing",
+      "group-effects": typeof g.GroupEffect === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeCache() {
+  const names = ["basic", "open", "match", "keys", "delete"];
+  const c = g.caches;
+  if (!c) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      open: typeof c.open === "function" ? "available" : "browser-missing",
+      match: typeof c.match === "function" ? "available" : "browser-missing",
+      keys: typeof c.keys === "function" ? "available" : "browser-missing",
+      delete: typeof c.delete === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeCanvas() {
+  const names = ["basic", "context-2d", "offscreen", "image-data", "blob-export"];
+  const HC = g.HTMLCanvasElement;
+  if (typeof HC !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "context-2d": typeof HC.prototype?.getContext === "function" ? "available" : "browser-missing",
+      offscreen: typeof g.OffscreenCanvas === "function" ? "available" : "browser-missing",
+      "image-data": typeof g.ImageData === "function" ? "available" : "browser-missing",
+      "blob-export": typeof HC.prototype?.toBlob === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeClipboard() {
+  const names = ["basic", "read-text", "write-text", "read-items", "write-items"];
+  const c = nav?.clipboard;
+  if (!c) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "read-text": typeof c.readText === "function" ? "available" : "browser-missing",
+      "write-text": typeof c.writeText === "function" ? "available" : "browser-missing",
+      "read-items": typeof c.read === "function" ? "available" : "browser-missing",
+      "write-items": typeof c.write === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeContacts() {
+  const names = ["basic", "select", "get-properties"];
+  const c = nav?.contacts;
+  if (!c) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      select: typeof c.select === "function" ? "available" : "browser-missing",
+      "get-properties": typeof c.getProperties === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeCookieStore() {
+  const names = ["basic", "get", "set", "delete", "change-events"];
+  const cs = g.cookieStore;
+  if (!cs) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  let hasChange = false;
+  try {
+    const CS = g.CookieStore;
+    hasChange =
+      typeof CS === "function" &&
+      Object.getOwnPropertyDescriptor(CS.prototype, "onchange") !== undefined;
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      get: typeof cs.get === "function" ? "available" : "browser-missing",
+      set: typeof cs.set === "function" ? "available" : "browser-missing",
+      delete: typeof cs.delete === "function" ? "available" : "browser-missing",
+      "change-events": hasChange ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeCredentialManagement() {
+  const names = ["basic", "password-credential", "federated-credential", "store", "prevent-silent-access"];
+  const cred = nav?.credentials;
+  if (!cred) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "password-credential":
+        typeof g.PasswordCredential === "function" ? "available" : "browser-missing",
+      "federated-credential":
+        typeof g.FederatedCredential === "function" ? "available" : "browser-missing",
+      store: typeof cred.store === "function" ? "available" : "browser-missing",
+      "prevent-silent-access":
+        typeof cred.preventSilentAccess === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeDom() {
+  const names = ["basic", "custom-elements", "shadow-dom", "form-associated", "popover", "dialog"];
+  const doc = g.document;
+  if (!doc || typeof g.Element === "undefined") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const HE = g.HTMLElement;
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "custom-elements":
+        typeof g.customElements !== "undefined" ? "available" : "browser-missing",
+      "shadow-dom":
+        typeof g.Element?.prototype?.attachShadow === "function" ? "available" : "browser-missing",
+      "form-associated":
+        typeof g.ElementInternals === "function" ? "available" : "browser-missing",
+      popover:
+        typeof HE?.prototype?.showPopover === "function" ? "available" : "browser-missing",
+      dialog:
+        typeof g.HTMLDialogElement === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeEme() {
+  const names = ["basic", "hdcp-policy", "persistent-license"];
+  if (typeof nav?.requestMediaKeySystemAccess !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const MK = g.MediaKeys;
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      // Requires an actual MediaKeys instance to test — probe via the
+      // prototype for a sync heuristic.
+      "hdcp-policy":
+        typeof MK?.prototype?.getStatusForPolicy === "function"
+          ? "available"
+          : "browser-missing",
+      // Persistent license is a sessionType string; no reliable sync
+      // check without creating a session. Report available whenever
+      // basic ships.
+      "persistent-license": "available",
+    },
+  };
+}
+
+function probeEvents() {
+  const names = ["basic", "custom-event", "abort-signal", "options-object"];
+  if (typeof g.EventTarget !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  // AbortSignal integration + options object are both universal on
+  // modern engines. Detect via a test add/remove that would throw on
+  // an engine that doesn't support the option shape.
+  let hasSignal = false;
+  let hasOptions = false;
+  try {
+    const et = new g.EventTarget();
+    const ctrl = new g.AbortController();
+    let called = false;
+    et.addEventListener("x", () => (called = true), { signal: ctrl.signal });
+    ctrl.abort();
+    et.dispatchEvent(new g.Event("x"));
+    hasSignal = !called;
+    et.addEventListener("y", () => {}, { once: true, passive: true });
+    hasOptions = true;
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "custom-event": typeof g.CustomEvent === "function" ? "available" : "browser-missing",
+      "abort-signal": hasSignal ? "available" : "browser-missing",
+      "options-object": hasOptions ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeFedcm() {
+  const names = ["basic", "active-mode", "disconnect"];
+  const IC = g.IdentityCredential;
+  if (typeof IC === "undefined") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "active-mode": typeof g.IdentityProvider !== "undefined" ? "available" : "browser-missing",
+      disconnect: typeof IC.disconnect === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeFullscreen() {
+  const names = ["basic", "request-element", "orientation-lock"];
+  const doc = g.document;
+  if (typeof doc?.exitFullscreen !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const El = g.Element;
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "request-element":
+        typeof El?.prototype?.requestFullscreen === "function"
+          ? "available"
+          : "browser-missing",
+      "orientation-lock":
+        typeof g.screen?.orientation?.lock === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeGamepad() {
+  const names = ["basic", "vibration-actuator", "haptic-actuators"];
+  if (typeof nav?.getGamepads !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const GP = g.Gamepad;
+  let hasVib = false;
+  let hasHaptic = false;
+  try {
+    hasVib =
+      GP?.prototype
+        ? Object.getOwnPropertyDescriptor(GP.prototype, "vibrationActuator") !== undefined
+        : false;
+    hasHaptic =
+      GP?.prototype
+        ? Object.getOwnPropertyDescriptor(GP.prototype, "hapticActuators") !== undefined
+        : false;
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "vibration-actuator": hasVib ? "available" : "browser-missing",
+      "haptic-actuators": hasHaptic ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeGeolocation() {
+  const names = ["basic", "get-current-position", "watch-position", "high-accuracy"];
+  const geo = nav?.geolocation;
+  if (!geo) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "get-current-position":
+        typeof geo.getCurrentPosition === "function" ? "available" : "browser-missing",
+      "watch-position":
+        typeof geo.watchPosition === "function" ? "available" : "browser-missing",
+      "high-accuracy": "available",
+    },
+  };
+}
+
+function probeHistory() {
+  const names = ["basic", "push-state", "replace-state", "navigation-api"];
+  const h = g.history;
+  if (!h) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "push-state": typeof h.pushState === "function" ? "available" : "browser-missing",
+      "replace-state": typeof h.replaceState === "function" ? "available" : "browser-missing",
+      "navigation-api": typeof g.navigation !== "undefined" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeMidi() {
+  const names = ["basic", "sysex", "software-synth"];
+  if (typeof nav?.requestMIDIAccess !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  // `sysex` and `software` are options on requestMIDIAccess. Every
+  // engine that ships the API supports the options; the actual
+  // permission is user-granted at request time.
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      sysex: "available",
+      "software-synth": "available",
+    },
+  };
+}
+
+function probeNetworkInfo() {
+  const names = ["basic", "effective-type", "downlink", "rtt", "save-data"];
+  const c = nav?.connection;
+  if (!c) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  let hasType = false, hasDl = false, hasRtt = false, hasSave = false;
+  try {
+    hasType = "effectiveType" in c;
+    hasDl = "downlink" in c;
+    hasRtt = "rtt" in c;
+    hasSave = "saveData" in c;
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "effective-type": hasType ? "available" : "browser-missing",
+      downlink: hasDl ? "available" : "browser-missing",
+      rtt: hasRtt ? "available" : "browser-missing",
+      "save-data": hasSave ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probePayment() {
+  const names = ["basic", "can-make-payment", "show", "abort", "update-events"];
+  const PR = g.PaymentRequest;
+  if (typeof PR !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const proto = PR.prototype;
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "can-make-payment":
+        typeof proto?.canMakePayment === "function" ? "available" : "browser-missing",
+      show: typeof proto?.show === "function" ? "available" : "browser-missing",
+      abort: typeof proto?.abort === "function" ? "available" : "browser-missing",
+      "update-events":
+        typeof g.PaymentRequestUpdateEvent === "function"
+          ? "available"
+          : "browser-missing",
+    },
+  };
+}
+
+function probePaymentHandler() {
+  const names = ["basic", "user-hint", "instruments"];
+  const PM = g.PaymentManager;
+  if (typeof PM !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const proto = PM.prototype;
+  let hasHint = false;
+  try {
+    hasHint =
+      proto ? Object.getOwnPropertyDescriptor(proto, "userHint") !== undefined : false;
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "user-hint": hasHint ? "available" : "browser-missing",
+      instruments:
+        typeof g.PaymentInstruments === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probePresentation() {
+  const names = ["basic", "controller", "receiver", "default-request"];
+  const p = nav?.presentation;
+  if (!p) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      controller: typeof g.PresentationRequest === "function" ? "available" : "browser-missing",
+      receiver: typeof g.PresentationReceiver === "function" ? "available" : "browser-missing",
+      "default-request": "defaultRequest" in p ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probePush() {
+  const names = ["basic", "subscribe", "get-subscription", "permission-state", "supported-encodings"];
+  const PM = g.PushManager;
+  if (typeof PM !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const proto = PM.prototype;
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      subscribe: typeof proto?.subscribe === "function" ? "available" : "browser-missing",
+      "get-subscription":
+        typeof proto?.getSubscription === "function" ? "available" : "browser-missing",
+      "permission-state":
+        typeof proto?.permissionState === "function" ? "available" : "browser-missing",
+      "supported-encodings":
+        Array.isArray(PM.supportedContentEncodings) ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeScreen() {
+  const names = ["basic", "orientation", "capture", "multi-screen"];
+  const s = g.screen;
+  if (!s) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      orientation: s.orientation ? "available" : "browser-missing",
+      capture: typeof nav?.mediaDevices?.getDisplayMedia === "function"
+        ? "available"
+        : "browser-missing",
+      "multi-screen":
+        typeof g.getScreenDetails === "function" || typeof g.window?.getScreenDetails === "function"
+          ? "available"
+          : "browser-missing",
+    },
+  };
+}
+
+function probeSensor() {
+  const names = [
+    "basic",
+    "accelerometer",
+    "gyroscope",
+    "linear-acceleration",
+    "orientation",
+    "absolute-orientation",
+    "magnetometer",
+    "ambient-light",
+    "gravity",
+  ];
+  const hasBasic = typeof g.Sensor === "function";
+  const hasAccel = typeof g.Accelerometer === "function";
+  if (!hasBasic && !hasAccel) {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: hasBasic ? "available" : "browser-missing",
+      accelerometer: hasAccel ? "available" : "browser-missing",
+      gyroscope: typeof g.Gyroscope === "function" ? "available" : "browser-missing",
+      "linear-acceleration":
+        typeof g.LinearAccelerationSensor === "function" ? "available" : "browser-missing",
+      orientation:
+        typeof g.RelativeOrientationSensor === "function" ? "available" : "browser-missing",
+      "absolute-orientation":
+        typeof g.AbsoluteOrientationSensor === "function" ? "available" : "browser-missing",
+      magnetometer: typeof g.Magnetometer === "function" ? "available" : "browser-missing",
+      "ambient-light":
+        typeof g.AmbientLightSensor === "function" ? "available" : "browser-missing",
+      gravity: typeof g.GravitySensor === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeSpeechRecognition() {
+  const names = ["basic", "continuous", "interim-results", "grammars"];
+  const SR = g.SpeechRecognition ?? g.webkitSpeechRecognition;
+  if (typeof SR !== "function") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const proto = SR.prototype;
+  let hasCont = false, hasInterim = false;
+  try {
+    hasCont = proto
+      ? Object.getOwnPropertyDescriptor(proto, "continuous") !== undefined
+      : false;
+    hasInterim = proto
+      ? Object.getOwnPropertyDescriptor(proto, "interimResults") !== undefined
+      : false;
+  } catch {
+    // fall through
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      continuous: hasCont ? "available" : "browser-missing",
+      "interim-results": hasInterim ? "available" : "browser-missing",
+      grammars:
+        typeof g.SpeechGrammarList === "function" ||
+        typeof g.webkitSpeechGrammarList === "function"
+          ? "available"
+          : "browser-missing",
+    },
+  };
+}
+
+function probeWakeLock() {
+  const names = ["basic", "screen-lock", "system-lock"];
+  const wl = nav?.wakeLock;
+  if (!wl) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "screen-lock": typeof wl.request === "function" ? "available" : "browser-missing",
+      // `system` type is a proposal, nowhere shipping in stable.
+      "system-lock": "browser-missing",
+    },
+  };
+}
+
+function probeWebLocks() {
+  const names = ["basic", "request", "query", "if-available", "steal"];
+  const l = nav?.locks;
+  if (!l) return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      request: typeof l.request === "function" ? "available" : "browser-missing",
+      query: typeof l.query === "function" ? "available" : "browser-missing",
+      // These options are universal wherever locks ships — the API
+      // rejects the promise for an actual conflict at call time, not
+      // at API-check time. Report available whenever request ships.
+      "if-available": typeof l.request === "function" ? "available" : "browser-missing",
+      steal: typeof l.request === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
 function makeSubfeatureProbes(asyncCache) {
   return {
     "browser:webgpu@0.9.0": probeWebgpu,
@@ -751,6 +1309,32 @@ function makeSubfeatureProbes(asyncCache) {
     "browser:media-session": probeMediaSession,
     "browser:speech-synthesis": probeSpeechSynthesis,
     "browser:web-transport": probeWebTransport,
+    "browser:animation": probeAnimation,
+    "browser:cache": probeCache,
+    "browser:canvas@0.1.0": probeCanvas,
+    "browser:clipboard": probeClipboard,
+    "browser:contacts": probeContacts,
+    "browser:cookie-store": probeCookieStore,
+    "browser:credential-management": probeCredentialManagement,
+    "browser:dom": probeDom,
+    "browser:eme": probeEme,
+    "browser:events": probeEvents,
+    "browser:fedcm": probeFedcm,
+    "browser:fullscreen": probeFullscreen,
+    "browser:gamepad": probeGamepad,
+    "browser:geolocation": probeGeolocation,
+    "browser:history": probeHistory,
+    "browser:midi": probeMidi,
+    "browser:network-info": probeNetworkInfo,
+    "browser:payment": probePayment,
+    "browser:payment-handler": probePaymentHandler,
+    "browser:presentation": probePresentation,
+    "browser:push": probePush,
+    "browser:screen": probeScreen,
+    "browser:sensor": probeSensor,
+    "browser:speech-recognition": probeSpeechRecognition,
+    "browser:wake-lock": probeWakeLock,
+    "browser:web-locks": probeWebLocks,
   };
 }
 
