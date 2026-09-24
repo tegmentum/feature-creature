@@ -226,6 +226,124 @@ namespaced object:
 }
 ```
 
+## Browser capability detection
+
+Alongside the core-wasm detector is a second detector whose job is to
+answer *"which `browser:*` WIT surfaces from the WasmOS lineage would
+resolve to working underlying APIs on this platform?"*. The design and
+the guest wasm live here; loader-side probe implementations live wherever
+the shim packages ship (`@tegmentum/browser-<name>-js` for the browser
+loader today).
+
+### Tri-state results
+
+Every catalog entry is answered with one of three states:
+
+| state             | meaning                                                                 |
+|-------------------|-------------------------------------------------------------------------|
+| `available`       | the browser exposes the backing API AND a probe is registered for it    |
+| `browser-missing` | probe ran, browser confirmed absent — instantiation would trap on call  |
+| `shim-missing`    | no probe registered — the platform loader has to refuse, stub, or degrade |
+
+The `browser-missing` / `shim-missing` distinction matters because a
+loader with a shim over a missing API will bind the WIT import and then
+trap on first call, whereas no shim can't bind the import at all —
+different failure modes need different loader responses.
+
+### WIT contracts
+
+`wit/engine.wit@feature-creature:engine@0.2.0` declares three worlds:
+
+- `detector` — core-wasm feature detection (unchanged from 0.1.0).
+- `browser-detector` — imports `browser-probe`, exports `browser-report`
+  (types + `detect-browser: func() -> list<capability-result>`).
+- `full-detector` — combines both.
+
+The `browser-report` interface bundles the type taxonomy with the export
+function so the wasm-cm runtime-guest's `resolve_type_def` (which only
+follows `Origin::Definition`, not `Origin::Import`) can lift the return
+value cleanly.
+
+### Catalog
+
+- `browser-features.toml` — auto-generated union of every `browser:*`
+  WIT package under WasmOS's `wit/deps/browser-*/`. Regenerate with
+  `node scripts/gen-browser-catalog.mjs` (defaults to a `../wasmos`
+  sibling checkout; override with `WASMOS_ROOT=/path`).
+- `browser-subfeatures.toml` — hand-authored per-package progressive-
+  layer taxonomies. Only `browser:webgpu@0.9.0` today, with its 9-layer
+  triangle → introspection breakdown.
+
+### Guest wasm
+
+`crates/browser-detector-component/` is a wit-bindgen cdylib targeting
+`wasm32-unknown-unknown`. `build.rs` merges the catalog + subfeatures
+into a Rust `PACKAGES` static; `lib.rs` iterates it and calls
+`browser_probe::probe(pkg)` per entry, splicing `shim-missing` for
+subfeatures the host omits.
+
+Build + wrap as a component:
+
+```sh
+cargo build --release --target wasm32-unknown-unknown \
+    -p feature-creature-browser-detector-component
+wasm-tools component new \
+    target/wasm32-unknown-unknown/release/feature_creature_browser_detector_component.wasm \
+    -o dist/browser-detector.component.wasm
+```
+
+### JS side (Pages demo)
+
+`web/js/browser-detector.transpiled.mjs` is a wit-js-bindgen `transpile`
+output that base64-embeds the component — one self-contained ES module
+runs it in the browser without a separate wasm fetch. `web/js/browser-
+report.js` wires 34 built-in presence probes (`typeof` / property
+checks) plus the WebGPU sub-feature probe, satisfies the `browser-probe`
+import, calls `detect-browser`, and hands the report back to
+`web/index.html` for rendering.
+
+Regenerate after changing the WIT or catalog:
+
+```sh
+# Requires wit-js-bindgen (in the wasmos monorepo).
+wit-js-bindgen transpile dist/browser-detector.component.wasm \
+    -o web/js/browser-detector.transpiled.mjs
+node scripts/check-transpile-drift.mjs --write
+```
+
+`scripts/check-transpile-drift.mjs` records a digest over the WIT +
+catalog and the transpile output; the Pages workflow runs it in verify
+mode and fails the build if either the sources shifted without a regen
+or the `.mjs` was hand-edited.
+
+### Adding a probe
+
+For a `browser:*` package answerable by a small `typeof` check, add
+an entry to the `BUILTIN_PROBES` table in `web/js/browser-report.js`
+and the sibling `packages/feature-creature-browser/src/builtin-probes.ts`
+in the WasmOS monorepo — the two are kept in sync by hand.
+
+For a package with a full JS implementer (see
+`@tegmentum/browser-webgpu-js`), the shim's own package exports
+`probe(env)` alongside its factory. The loader registers that probe on
+the shared `ProbeRegistry` after the built-ins, so the shim's probe
+overrides the presence-only fallback.
+
+### Playwright regression tests
+
+`tests/browser/` runs the Pages demo against Chromium, Firefox, and
+WebKit through Playwright. Every browser produces the full 53-entry
+report; the test asserts tri-state discipline, zero `shim-missing` (the
+built-ins cover the whole catalog), and per-browser expectations for
+WebGPU sub-features.
+
+```sh
+cd tests/browser
+pnpm install
+pnpm run install-browsers   # one-time — downloads the three engines
+pnpm test
+```
+
 ## Running as a component
 
 The same probe set is also packaged as a WebAssembly component that
