@@ -1,0 +1,5 @@
+# Freshness digest for browser-detector.transpiled.mjs.
+# Verified by scripts/check-transpile-drift.mjs; regenerated alongside
+# the .mjs whenever the WIT or the catalog changes.
+transpile b86a0a1d81bd23ae74367d4ed92a3be6784778cbd7a211100d5222b862db3676
+sources   0d74a4b2b7ca992c017b1a08823ac7a1f895df975808802890c1721b6d7eee0b
