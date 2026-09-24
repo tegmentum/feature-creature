@@ -225,7 +225,10 @@
         "basic": "available",
         "recorder": "available",
         "get-user-media": "available",
-        "device-enumeration": "available"
+        "device-enumeration": "available",
+        "audio-input-devices": "available",
+        "video-input-devices": "available",
+        "audio-output-devices": "browser-missing"
       }
     },
     "browser:media-session": {
@@ -372,6 +375,8 @@
       "subfeatures": {
         "basic": "available",
         "estimate": "available",
+        "estimate-values": "available",
+        "usage-details": "browser-missing",
         "persist": "available",
         "directory": "available"
       }
@@ -429,8 +434,8 @@
       "state": "available",
       "subfeatures": {
         "basic": "available",
-        "conditional-mediation": "available",
-        "platform-auth": "available",
+        "conditional-mediation": "browser-missing",
+        "platform-auth": "browser-missing",
         "client-capabilities": "available"
       }
     },
@@ -445,7 +450,8 @@
         "depth-stencil-blend": "browser-missing",
         "compute-bundles": "browser-missing",
         "polish": "browser-missing",
-        "introspection": "browser-missing"
+        "introspection": "browser-missing",
+        "adapter-info-content": "browser-missing"
       }
     },
     "browser:webrtc": {

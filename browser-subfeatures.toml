@@ -566,6 +566,14 @@ names = [
     "get-user-media",
     # `navigator.mediaDevices.enumerateDevices` presence.
     "device-enumeration",
+    # Async pre-await: enumerateDevices() reported at least one
+    # `audioinput` device. Labels are permission-gated but `kind` is
+    # always populated.
+    "audio-input-devices",
+    # Async pre-await: at least one `videoinput` device present.
+    "video-input-devices",
+    # Async pre-await: at least one `audiooutput` device present.
+    "audio-output-devices",
 ]
 
 # browser:performance — Performance API tiers. Base timing is universal;
@@ -666,8 +674,15 @@ package = "browser:storage"
 names = [
     # `navigator.storage` presence.
     "basic",
-    # `navigator.storage.estimate()`.
+    # `navigator.storage.estimate()` method presence.
     "estimate",
+    # Async pre-await: estimate() actually returns quota + usage
+    # numbers, not just that the method is exposed.
+    "estimate-values",
+    # Async pre-await: estimate().usageDetails object populated — per-
+    # store breakdown (indexedDB / caches / fileSystem). Chromium
+    # exposes this; Firefox and WebKit don't.
+    "usage-details",
     # `navigator.storage.persist()`.
     "persist",
     # Origin Private File System — `navigator.storage.getDirectory()`.
@@ -680,9 +695,13 @@ package = "browser:webauthn"
 names = [
     # `PublicKeyCredential` + `navigator.credentials.get`/`create`.
     "basic",
-    # Conditional mediation — `PublicKeyCredential.isConditionalMediationAvailable`.
+    # Conditional mediation. Async pre-await:
+    # `isConditionalMediationAvailable()` actually returns true — not
+    # just that the method exists.
     "conditional-mediation",
-    # Platform authenticator (Touch ID, Windows Hello, etc.).
+    # Platform authenticator. Async pre-await:
+    # `isUserVerifyingPlatformAuthenticatorAvailable()` actually
+    # returns true — a real Touch ID / Windows Hello / etc. is present.
     "platform-auth",
     # `PublicKeyCredential.getClientCapabilities()` — very recent
     # addition, ships incrementally across browsers.
@@ -725,4 +744,8 @@ names = [
     # adapter.get-limits() / device.get-limits() returning the full
     # 32-field limits record.
     "introspection",
+    # Async pre-await: adapter.getInfo() / adapter.info actually
+    # returns a non-empty vendor string. Chromium populates the fields;
+    # Firefox and WebKit largely mask them.
+    "adapter-info-content",
 ]

@@ -95,7 +95,7 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
   // WebGPU sub-features. Chromium and modern Firefox both ship webgpu;
   // WebKit hides it behind a flag off by default.
   const webgpu = byPkg["browser:webgpu@0.9.0"];
-  expect(webgpu.subfeatures).toHaveLength(9);
+  expect(webgpu.subfeatures).toHaveLength(10);
 
   const sub = (name: string) =>
     webgpu.subfeatures.find((s) => s.name === name)?.state;
@@ -319,6 +319,38 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
   expect(
     byPkg["browser:crypto"].subfeatures.find((s) => s.name === "ed25519")?.state,
   ).toBe("available");
+
+  // Async pre-computed WebAuthn signals. Playwright's headless test
+  // environments never surface a real platform authenticator, so
+  // `platform-auth` reads browser-missing everywhere. Conditional
+  // mediation shows real per-engine variance today but the specific
+  // Firefox value shifts across Playwright versions — assert tri-
+  // state discipline for it rather than pinning a value.
+  const wanSub = (name: string) =>
+    byPkg["browser:webauthn"].subfeatures.find((s) => s.name === name)?.state;
+  expect(wanSub("basic")).toBe("available");
+  expect(wanSub("platform-auth")).toBe("browser-missing");
+  expect(["available", "browser-missing"]).toContain(wanSub("conditional-mediation"));
+
+  // Async pre-computed storage estimate: every engine returns numbers.
+  // `usage-details` (per-store breakdown) is Chromium-only.
+  const stSub = (name: string) =>
+    byPkg["browser:storage"].subfeatures.find((s) => s.name === name)?.state;
+  expect(stSub("estimate-values")).toBe("available");
+  // Playwright's Chromium doesn't populate usageDetails on empty
+  // storage; we don't strictly assert on it, only that it's a valid
+  // tri-state arm.
+  expect(["available", "browser-missing"]).toContain(stSub("usage-details"));
+
+  // Async pre-computed media devices — Playwright's headless runners
+  // typically have simulated audio-input + video-input; audio-output
+  // is a Chromium-only exposure historically. Just assert tri-state
+  // discipline, not specific values.
+  const meSub = (name: string) =>
+    byPkg["browser:media"].subfeatures.find((s) => s.name === name)?.state;
+  for (const layer of ["audio-input-devices", "video-input-devices", "audio-output-devices"]) {
+    expect(["available", "browser-missing"]).toContain(meSub(layer));
+  }
 
   // browser:dom — Popover + Dialog + custom elements + shadow DOM are
   // universal on modern engines.

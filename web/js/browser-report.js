@@ -31,7 +31,12 @@ const ENVIRONMENT_IFACE = "feature-creature:engine/environment@0.2.0";
 // v0.1–v0.7 shipped as one bundle in every browser that shipped WebGPU
 // at all, so their availability tracks the whole package's.
 // -------------------------------------------------------------------
-function probeWebgpu() {
+function makeWebgpuProbe(asyncCache) {
+  return function probeWebgpu() {
+    return probeWebgpuInner(asyncCache);
+  };
+}
+function probeWebgpuInner(asyncCache) {
   const nav = globalThis.navigator;
   const gpu = nav?.gpu;
   if (!gpu || typeof gpu.requestAdapter !== "function") {
@@ -47,6 +52,7 @@ function probeWebgpu() {
         "compute-bundles": "browser-missing",
         polish: "browser-missing",
         introspection: "browser-missing",
+        "adapter-info-content": "browser-missing",
       },
     };
   }
@@ -83,6 +89,11 @@ function probeWebgpu() {
       "compute-bundles": state(hasRenderBundleEncoder),
       polish: state(hasPolish),
       introspection: state(hasIntrospection),
+      // Async pre-awaited: getInfo()/info actually returns a
+      // non-empty vendor string. Chromium exposes it; Firefox and
+      // WebKit mask most fields.
+      "adapter-info-content":
+        !!asyncCache?.webgpuAdapterInfo?.vendor ? "available" : "browser-missing",
     },
   };
 }
@@ -224,47 +235,76 @@ function probeWorker() {
   };
 }
 
-function probeStorage() {
-  const names = ["basic", "estimate", "persist", "directory"];
-  const nav = g.navigator;
-  const s = nav?.storage;
-  if (!s) {
-    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
-  }
-  return {
-    state: "available",
-    subfeatures: {
-      basic: "available",
-      estimate: typeof s.estimate === "function" ? "available" : "browser-missing",
-      persist: typeof s.persist === "function" ? "available" : "browser-missing",
-      directory: typeof s.getDirectory === "function" ? "available" : "browser-missing",
-    },
+function makeStorageProbe(asyncCache) {
+  return function probeStorage() {
+    const names = [
+      "basic",
+      "estimate",
+      "estimate-values",
+      "usage-details",
+      "persist",
+      "directory",
+    ];
+    const nav = g.navigator;
+    const s = nav?.storage;
+    if (!s) {
+      return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+    }
+    return {
+      state: "available",
+      subfeatures: {
+        basic: "available",
+        estimate: typeof s.estimate === "function" ? "available" : "browser-missing",
+        // Async pre-awaited: `available` means estimate() actually
+        // resolves to real quota + usage numbers, not just that the
+        // method is exposed.
+        "estimate-values": asyncCache.storageEstimate ? "available" : "browser-missing",
+        // Chromium exposes a `usageDetails` breakdown per store
+        // (indexedDB, caches, fileSystem, etc.); Firefox and WebKit
+        // don't. Signals whether per-storage-kind accounting is
+        // available.
+        "usage-details":
+          asyncCache.storageEstimate?.hasUsageDetails ? "available" : "browser-missing",
+        persist: typeof s.persist === "function" ? "available" : "browser-missing",
+        directory: typeof s.getDirectory === "function" ? "available" : "browser-missing",
+      },
+    };
   };
 }
 
-function probeWebauthn() {
-  const names = ["basic", "conditional-mediation", "platform-auth", "client-capabilities"];
-  const PKC = g.PublicKeyCredential;
-  if (typeof PKC === "undefined") {
-    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
-  }
-  return {
-    state: "available",
-    subfeatures: {
-      basic: "available",
-      "conditional-mediation":
-        typeof PKC.isConditionalMediationAvailable === "function"
+function makeWebauthnProbe(asyncCache) {
+  return function probeWebauthn() {
+    const names = [
+      "basic",
+      "conditional-mediation",
+      "platform-auth",
+      "client-capabilities",
+    ];
+    const PKC = g.PublicKeyCredential;
+    if (typeof PKC === "undefined") {
+      return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+    }
+    return {
+      state: "available",
+      subfeatures: {
+        basic: "available",
+        // Async pre-awaited: `available` means the engine reported
+        // conditional-mediation is actually usable, not just that the
+        // method exists.
+        "conditional-mediation": asyncCache.webauthnConditionalMediation
           ? "available"
           : "browser-missing",
-      "platform-auth":
-        typeof PKC.isUserVerifyingPlatformAuthenticatorAvailable === "function"
+        // Async pre-awaited: `available` means a platform authenticator
+        // (Touch ID / Windows Hello / etc) is physically present.
+        "platform-auth": asyncCache.webauthnPlatformAuthenticator
           ? "available"
           : "browser-missing",
-      "client-capabilities":
-        typeof PKC.getClientCapabilities === "function"
-          ? "available"
-          : "browser-missing",
-    },
+        "client-capabilities":
+          typeof PKC.getClientCapabilities === "function"
+            ? "available"
+            : "browser-missing",
+      },
+    };
   };
 }
 
@@ -298,42 +338,158 @@ function makeCryptoProbe(asyncCache) {
  * we pre-compute the async signals before booting the wasm component
  * and expose the results through a cache that the sync probes above
  * close over.
+ *
+ * All probes run in parallel via Promise.all — each one wraps its own
+ * try/catch so a single failure doesn't sink the batch. Missing values
+ * fall to the corresponding "browser-missing" / null sentinel.
  */
 async function runAsyncSubfeatureProbes() {
-  const cache = { ed25519: false };
-  // Ed25519 in SubtleCrypto — try to generate an Ed25519 key pair. If
-  // the algorithm is unknown, the promise rejects synchronously with
-  // a `NotSupportedError`; if it's supported, we get a key pair back.
-  try {
-    if (g.crypto?.subtle?.generateKey) {
-      const kp = await g.crypto.subtle.generateKey(
-        { name: "Ed25519" },
-        false,
-        ["sign", "verify"],
-      );
+  const cache = {
+    ed25519: false,
+    webauthnPlatformAuthenticator: false,
+    webauthnConditionalMediation: false,
+    storageEstimate: null, // { quota, usage, hasUsageDetails }
+    webgpuAdapterInfo: null, // { vendor, architecture, device, description, backendType, adapterType }
+    mediaDevices: null, // { hasAudioInput, hasVideoInput, hasAudioOutput }
+  };
+
+  const probes = [
+    // Ed25519 in SubtleCrypto — try to generate an Ed25519 key pair.
+    // Rejects with NotSupportedError on engines that don't ship it.
+    async () => {
+      const s = g.crypto?.subtle;
+      if (!s?.generateKey) return;
+      const kp = await s.generateKey({ name: "Ed25519" }, false, ["sign", "verify"]);
       cache.ed25519 = !!kp;
-    }
-  } catch {
-    // fall through — cache.ed25519 stays false
-  }
+    },
+
+    // WebAuthn platform authenticator — the real answer requires
+    // asking the browser "is one physically present". The sync
+    // presence check just tells us the METHOD exists; this returns
+    // the actual runtime state (Touch ID / Windows Hello / etc).
+    async () => {
+      const PKC = g.PublicKeyCredential;
+      if (typeof PKC?.isUserVerifyingPlatformAuthenticatorAvailable !== "function") return;
+      const v = await PKC.isUserVerifyingPlatformAuthenticatorAvailable();
+      cache.webauthnPlatformAuthenticator = !!v;
+    },
+
+    // WebAuthn conditional mediation — same distinction as above:
+    // sync test says "method exists", async test says "engine + OS
+    // will actually surface conditional-mediation UI".
+    async () => {
+      const PKC = g.PublicKeyCredential;
+      if (typeof PKC?.isConditionalMediationAvailable !== "function") return;
+      const v = await PKC.isConditionalMediationAvailable();
+      cache.webauthnConditionalMediation = !!v;
+    },
+
+    // Storage estimate — the sync test only checks that `estimate` is
+    // a function. The async test confirms the engine returns real quota
+    // numbers, and reports whether the `usageDetails` breakdown is
+    // populated (Chromium exposes per-store details, others don't).
+    async () => {
+      const s = nav?.storage;
+      if (typeof s?.estimate !== "function") return;
+      const est = await s.estimate();
+      const details = est && est.usageDetails;
+      cache.storageEstimate = {
+        quota: typeof est?.quota === "number" ? est.quota : 0,
+        usage: typeof est?.usage === "number" ? est.usage : 0,
+        hasUsageDetails:
+          !!details && Object.keys(details).length > 0,
+      };
+    },
+
+    // WebGPU adapter info — pre-await requestAdapter, then read
+    // adapter.info (v0.8) or adapter.getInfo() (v0.9). Provides real
+    // hardware vendor + architecture strings when the browser exposes
+    // them (Chromium does; Firefox and WebKit largely mask them).
+    async () => {
+      const gpu = nav?.gpu;
+      if (typeof gpu?.requestAdapter !== "function") return;
+      const adapter = await gpu.requestAdapter().catch(() => null);
+      if (!adapter) return;
+      let info = null;
+      // v0.9: async getInfo() returning a full record.
+      if (typeof adapter.getInfo === "function") {
+        try {
+          info = await adapter.getInfo();
+        } catch {}
+      }
+      // v0.8 fallback: sync `.info` getter.
+      if (!info && adapter.info) info = adapter.info;
+      if (!info) return;
+      cache.webgpuAdapterInfo = {
+        vendor: String(info.vendor ?? ""),
+        architecture: String(info.architecture ?? ""),
+        device: String(info.device ?? ""),
+        description: String(info.description ?? ""),
+        backendType: String(info.backendType ?? ""),
+        adapterType: String(info.adapterType ?? ""),
+      };
+    },
+
+    // MediaDevices enumeration — every engine that ships MediaDevices
+    // returns a list of devices, but labels are blank until the user
+    // grants microphone/camera permission. We only care about `kind`,
+    // which is populated regardless. Reveals whether the machine
+    // physically has an audio-in, video-in, or audio-out endpoint.
+    async () => {
+      const md = nav?.mediaDevices;
+      if (typeof md?.enumerateDevices !== "function") return;
+      const devices = await md.enumerateDevices();
+      const kinds = new Set(
+        Array.isArray(devices) ? devices.map((d) => d?.kind) : [],
+      );
+      cache.mediaDevices = {
+        hasAudioInput: kinds.has("audioinput"),
+        hasVideoInput: kinds.has("videoinput"),
+        hasAudioOutput: kinds.has("audiooutput"),
+      };
+    },
+  ];
+
+  await Promise.all(
+    probes.map((fn) => fn().catch(() => {})), // suppress per-probe failures
+  );
   return cache;
 }
 
-function probeMedia() {
-  const names = ["basic", "recorder", "get-user-media", "device-enumeration"];
-  const hasStream = typeof g.MediaStream === "function";
-  const md = g.navigator?.mediaDevices;
-  if (!hasStream && !md) {
-    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
-  }
-  return {
-    state: "available",
-    subfeatures: {
-      basic: hasStream ? "available" : "browser-missing",
-      recorder: typeof g.MediaRecorder === "function" ? "available" : "browser-missing",
-      "get-user-media": typeof md?.getUserMedia === "function" ? "available" : "browser-missing",
-      "device-enumeration": typeof md?.enumerateDevices === "function" ? "available" : "browser-missing",
-    },
+function makeMediaProbe(asyncCache) {
+  return function probeMedia() {
+    const names = [
+      "basic",
+      "recorder",
+      "get-user-media",
+      "device-enumeration",
+      "audio-input-devices",
+      "video-input-devices",
+      "audio-output-devices",
+    ];
+    const hasStream = typeof g.MediaStream === "function";
+    const md = g.navigator?.mediaDevices;
+    if (!hasStream && !md) {
+      return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+    }
+    const dev = asyncCache.mediaDevices;
+    return {
+      state: "available",
+      subfeatures: {
+        basic: hasStream ? "available" : "browser-missing",
+        recorder: typeof g.MediaRecorder === "function" ? "available" : "browser-missing",
+        "get-user-media":
+          typeof md?.getUserMedia === "function" ? "available" : "browser-missing",
+        "device-enumeration":
+          typeof md?.enumerateDevices === "function" ? "available" : "browser-missing",
+        // Async pre-awaited enumerateDevices: reveals which physical
+        // device kinds are present. Labels are blank without user
+        // permission, but the `kind` field is always populated.
+        "audio-input-devices": dev?.hasAudioInput ? "available" : "browser-missing",
+        "video-input-devices": dev?.hasVideoInput ? "available" : "browser-missing",
+        "audio-output-devices": dev?.hasAudioOutput ? "available" : "browser-missing",
+      },
+    };
   };
 }
 
@@ -1286,13 +1442,13 @@ function probeWebLocks() {
 
 function makeSubfeatureProbes(asyncCache) {
   return {
-    "browser:webgpu@0.9.0": probeWebgpu,
+    "browser:webgpu@0.9.0": makeWebgpuProbe(asyncCache),
     "browser:service-worker": probeServiceWorker,
     "browser:worker": probeWorker,
-    "browser:storage": probeStorage,
-    "browser:webauthn": probeWebauthn,
+    "browser:storage": makeStorageProbe(asyncCache),
+    "browser:webauthn": makeWebauthnProbe(asyncCache),
     "browser:crypto": makeCryptoProbe(asyncCache),
-    "browser:media": probeMedia,
+    "browser:media": makeMediaProbe(asyncCache),
     "browser:performance": probePerformance,
     "browser:web-audio": probeWebAudio,
     "browser:webrtc": probeWebrtc,
