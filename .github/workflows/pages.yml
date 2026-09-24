@@ -37,6 +37,9 @@ jobs:
       - name: Verify browser-detector transpile is fresh
         run: node scripts/check-transpile-drift.mjs
 
+      - name: Verify no builtin probe shadows a shipped shim probe
+        run: node scripts/check-probe-overlap.mjs
+
       - name: Assemble _site/
         run: |
           set -eux
