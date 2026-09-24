@@ -140,6 +140,21 @@ interface browser-probe {
     /// used in the guest-side catalog (`browser:webgpu@0.9.0`,
     /// `browser:fetch`, etc.). Parameter is spelled `pkg` because
     /// `package` is a WIT keyword.
+    ///
+    /// The WIT signature is deliberately sync — the guest calls this
+    /// with a plain call, no `await`. On the JS host, transpile with
+    /// `--async-imports feature-creature:engine/browser-probe#probe`
+    /// so wit-js-bindgen wraps the JS impl with `WebAssembly.Suspending`
+    /// on JSPI hosts: the guest's sync call transparently suspends
+    /// while the JS impl awaits the underlying browser API
+    /// (SubtleCrypto, WebAuthn, WebGPU, StorageManager, MediaDevices,
+    /// etc.), then resumes with the resolved capability-result.
+    ///
+    /// This is a JS-side transpile choice rather than a WIT-level
+    /// `async func` — Preview 3 async is currently gated on runtime
+    /// support the wasm-cm scheduler doesn't have stable end-to-end.
+    /// JSPI + Suspending gives us the same runtime shape with a
+    /// simpler ABI.
     probe: func(pkg: string) -> capability-result;
 }
 

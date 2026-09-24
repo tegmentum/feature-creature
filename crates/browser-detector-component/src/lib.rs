@@ -47,6 +47,13 @@ impl Guest for Component {
     fn detect_browser() -> Vec<ExportCapabilityResult> {
         let mut out = Vec::with_capacity(PACKAGE_COUNT);
         for pkg in PACKAGES.iter() {
+            // WIT-level `browser-probe.probe` is sync. On JSPI-capable
+            // hosts, wit-js-bindgen's `--async-imports` flag wraps the
+            // JS impl with `WebAssembly.Suspending` so the guest's
+            // plain call transparently suspends while the JS impl
+            // awaits SubtleCrypto / WebAuthn / WebGPU / etc. Guest
+            // code stays synchronous — no `.await` needed, no Preview 3
+            // scheduler dependency.
             let host_result = browser_probe::probe(pkg.name);
             let mut subfeatures: Vec<ExportSubfeatureResult> = host_result
                 .subfeatures

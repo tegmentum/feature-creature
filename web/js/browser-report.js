@@ -1503,7 +1503,16 @@ function makeSubfeatureProbes(asyncCache) {
 // return an authoritative answer from a sync WIT call.
 // -------------------------------------------------------------------
 function makeProbeImpl(subfeatureProbes) {
-  return function probeImpl(pkg) {
+  // WIT-level `browser-probe.probe` is `async func` since engine@0.2.0
+  // was updated for the async ABI — the wasm-cm scheduler on the guest
+  // side awaits this Promise for real (backed by JSPI or asyncify),
+  // rather than the JS host having to pre-await into a synchronous
+  // cache. Sub-feature probes stay sync internally where they can — the
+  // pre-computed async cache still gets populated in parallel by
+  // `runAsyncSubfeatureProbes()` for performance — but the interface is
+  // now honestly async, so future async signals just get added inline
+  // here without expanding the cache.
+  return async function probeImpl(pkg) {
     const rich = subfeatureProbes[pkg];
     if (rich) {
       const r = rich();
@@ -1573,7 +1582,13 @@ export async function detectBrowserCapabilities() {
     [BROWSER_PROBE_IFACE]: { probe },
     [ENVIRONMENT_IFACE]: environmentImpls,
   });
-  const browser = exp[BROWSER_REPORT_IFACE]["detect-browser"]();
-  const environment = exp[BROWSER_REPORT_IFACE]["detect-environment"]();
+  // detect-browser is now `async func` at the WIT layer, so its
+  // export trampoline returns a Promise. detect-environment stays sync
+  // — every environment probe is pre-awaited into a cache and answered
+  // synchronously.
+  const [browser, environment] = await Promise.all([
+    exp[BROWSER_REPORT_IFACE]["detect-browser"](),
+    exp[BROWSER_REPORT_IFACE]["detect-environment"](),
+  ]);
   return { browser, environment };
 }
