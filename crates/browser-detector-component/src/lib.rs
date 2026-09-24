@@ -31,7 +31,7 @@ wit_bindgen::generate!({
 // code below reads clearly.
 use exports::feature_creature::engine::browser_report::{
     CapabilityResult as ExportCapabilityResult,
-    CapabilityState as ExportCapabilityState, Guest,
+    CapabilityState as ExportCapabilityState, EnvironmentSnapshot, Guest,
     SubfeatureResult as ExportSubfeatureResult,
 };
 use feature_creature::engine::browser_probe;
@@ -39,6 +39,7 @@ use feature_creature::engine::browser_report::{
     CapabilityState as ImportCapabilityState,
     SubfeatureResult as ImportSubfeatureResult,
 };
+use feature_creature::engine::environment as host_env;
 
 struct Component;
 
@@ -74,6 +75,17 @@ impl Guest for Component {
             });
         }
         out
+    }
+
+    fn detect_environment() -> EnvironmentSnapshot {
+        EnvironmentSnapshot {
+            shared_memory: host_env::shared_memory(),
+            shared_memory_transferable: host_env::shared_memory_transferable(),
+            bigint_integration: host_env::bigint_integration(),
+            js_string_builtins: host_env::js_string_builtins(),
+            streaming_compilation: host_env::streaming_compilation(),
+            jspi: host_env::jspi(),
+        }
     }
 }
 

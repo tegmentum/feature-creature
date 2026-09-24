@@ -96,6 +96,35 @@ interface browser-report {
     /// catalog (alphabetical by package name), so a diff between two runs
     /// on the same guest wasm is stable.
     detect-browser: func() -> list<capability-result>;
+
+    /// Snapshot of the six `environment` interface probes gathered in one
+    /// shot. Every field mirrors the same-named function in `environment`
+    /// (the guest calls each one and packs the booleans into this record)
+    /// so consumers can lift the whole environment axis with a single
+    /// exported call, instead of chaining six imports on the host side.
+    record environment-snapshot {
+        /// `SharedArrayBuffer` constructor is available.
+        shared-memory: bool,
+        /// SharedArrayBuffer additionally survives a `postMessage`
+        /// structured clone — the real precondition for using Wasm
+        /// threads under a browser without cross-origin isolation.
+        shared-memory-transferable: bool,
+        /// The BigInt↔i64 boundary at the wasm ABI works end-to-end.
+        bigint-integration: bool,
+        /// JS String Builtins proposal is available on the platform.
+        js-string-builtins: bool,
+        /// `WebAssembly.compileStreaming` / `instantiateStreaming` exist.
+        streaming-compilation: bool,
+        /// JavaScript Promise Integration: `WebAssembly.promising` exists
+        /// and produces a JS wrapper whose invocation yields a Promise.
+        jspi: bool,
+    }
+
+    /// Poll every `environment` probe on the host in one call and return
+    /// the packed snapshot. Loaders read this alongside `detect-browser`
+    /// to fill out the JS/Web capability axis of a CapabilitySet without
+    /// running six separate imports.
+    detect-environment: func() -> environment-snapshot;
 }
 
 /// Per-platform browser capability probe, implemented by the loader
@@ -133,6 +162,12 @@ world detector {
 /// which the wasm-cm runtime-guest resolver requires at this milestone.
 world browser-detector {
     import browser-probe;
+    /// Environment probes the guest bundles into `detect-environment`;
+    /// the host supplies the six checks (SharedArrayBuffer, JSPI, JS
+    /// String Builtins, streaming compilation, etc.). Optional at the
+    /// binding level — hosts that don't wire this up will fault at
+    /// call time only, not at instantiation.
+    import environment;
     export browser-report;
 }
 

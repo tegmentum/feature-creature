@@ -333,11 +333,12 @@
       }
 
       try {
-        const [coreResult, browserResults] = await Promise.all([
+        const [coreResult, detectorResult] = await Promise.all([
           detect(fetch("./assets/detector.wasm")),
           detectBrowserCapabilities().catch((err) => {
             // Browser section is additive — if the transpiled module or
-            // its imports fail, keep the core report visible.
+            // its imports fail, keep the core report visible and fall
+            // back to the classic JS environment probe path below.
             console.error("browser-detector failed:", err);
             return null;
           }),
@@ -349,7 +350,30 @@
             "This browser doesn't expose WebAssembly at all — no report possible.";
         } else {
           const core = { ...coreResult.core };
-          const env  = { ...coreResult.environment };
+
+          // Prefer the browser-detector component's environment snapshot
+          // when available — same underlying probes, but now routed
+          // through the WIT so the component-model side and the demo
+          // agree on one canonical set. Fall back to the standalone JS
+          // probe if the transpiled module failed to boot for any reason.
+          let env;
+          if (detectorResult) {
+            // wit-js-bindgen lowerCamels WIT record field names, so
+            // `shared-memory` at the WIT level lands as `sharedMemory`
+            // in the JS record. Rehydrate the hyphenated names the
+            // renderer + JSON payload expect.
+            const e = detectorResult.environment;
+            env = {
+              "shared-memory": e.sharedMemory,
+              "shared-memory-transferable": e.sharedMemoryTransferable,
+              "bigint-integration": e.bigintIntegration,
+              "js-string-builtins": e.jsStringBuiltins,
+              "streaming-compilation": e.streamingCompilation,
+              "jspi": e.jspi,
+            };
+          } else {
+            env = { ...coreResult.environment };
+          }
 
           renderGroup(document.getElementById("core"), Object.entries(core));
           renderGroup(document.getElementById("env"),  Object.entries(env));
@@ -366,7 +390,8 @@
           const coreYes    = coreValues.filter(Boolean).length;
 
           let browserSummary = "";
-          if (browserResults) {
+          if (detectorResult) {
+            const browserResults = detectorResult.browser;
             renderBrowserReport(document.getElementById("browser"), browserResults);
             const states = browserResults.map((r) => r.state);
             const available = states.filter((s) => s === "available").length;

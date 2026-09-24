@@ -34,6 +34,28 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
 
   expect(browser).toHaveLength(53);
 
+  // Environment snapshot is now routed through the WIT component's
+  // `detect-environment` export. Every field is boolean; the six
+  // canonical probe names all present with hyphenated keys.
+  const env = report.environment as Record<string, boolean>;
+  for (const key of [
+    "shared-memory",
+    "shared-memory-transferable",
+    "bigint-integration",
+    "js-string-builtins",
+    "streaming-compilation",
+    "jspi",
+  ]) {
+    expect(env, `env.${key}`).toHaveProperty(key);
+    expect(typeof env[key], `typeof env.${key}`).toBe("boolean");
+  }
+  // Every Playwright browser exposes `WebAssembly.compileStreaming`.
+  // `shared-memory` needs cross-origin isolation (COOP+COEP), which
+  // Python's http.server does not send, so it may read false here even
+  // on browsers that ship SharedArrayBuffer — the discipline check
+  // above (all fields present, all boolean) is the load-bearing part.
+  expect(env["streaming-compilation"]).toBe(true);
+
   // Tri-state discipline: every state is one of the three arms.
   const states = new Set(browser.map((r) => r.state));
   expect(

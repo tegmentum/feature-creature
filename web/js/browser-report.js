@@ -17,9 +17,11 @@
 //                       package to answer meaningfully).
 
 import { instantiate } from "./browser-detector.transpiled.mjs";
+import { detectEnvironment } from "./environment.js";
 
 const BROWSER_PROBE_IFACE = "feature-creature:engine/browser-probe@0.2.0";
 const BROWSER_REPORT_IFACE = "feature-creature:engine/browser-report@0.2.0";
+const ENVIRONMENT_IFACE = "feature-creature:engine/environment@0.2.0";
 
 // -------------------------------------------------------------------
 // WebGPU sub-feature probe. browser:webgpu's WIT docstring (in the
@@ -192,12 +194,46 @@ function probeImpl(pkg) {
 }
 
 /**
- * Run the browser-detector component and return the report.
- * @returns {Promise<Array<{ package_: string, state: string, subfeatures: Array<{name:string,state:string}> }>>}
+ * Run the browser-detector component and return both the browser
+ * capability report and the environment snapshot. The environment
+ * axis (SharedArrayBuffer, JSPI, JS String Builtins, streaming
+ * compilation, etc.) is now part of the same wasm-component call —
+ * the guest calls each environment.* import and packs the results
+ * into `environment-snapshot`, so consumers get the full
+ * platform-capability picture in one instantiation.
+ *
+ * The environment WIT declares its probes as sync bool-returning
+ * funcs, but the JS implementations for `shared-memory-transferable`,
+ * `bigint-integration`, `jspi`, and `js-string-builtins` are
+ * inherently async (MessageChannel round-trip, wasm instantiate,
+ * live-wrap probe). We pre-compute the whole snapshot BEFORE booting
+ * the component and expose sync wrappers backed by the cache — the
+ * guest sees synchronous imports the transpile ABI expects.
+ *
+ * @returns {Promise<{
+ *   browser: Array<{ package_: string, state: string, subfeatures: Array<{name:string,state:string}> }>,
+ *   environment: { shared_memory: boolean, shared_memory_transferable: boolean, bigint_integration: boolean, js_string_builtins: boolean, streaming_compilation: boolean, jspi: boolean }
+ * }>}
  */
 export async function detectBrowserCapabilities() {
+  // Cache the async environment probes before boot so the sync
+  // wrappers below can answer without suspending.
+  const envCache = await detectEnvironment();
+
+  const environmentImpls = {
+    "shared-memory": () => !!envCache["shared-memory"],
+    "shared-memory-transferable": () => !!envCache["shared-memory-transferable"],
+    "bigint-integration": () => !!envCache["bigint-integration"],
+    "js-string-builtins": () => !!envCache["js-string-builtins"],
+    "streaming-compilation": () => !!envCache["streaming-compilation"],
+    jspi: () => !!envCache["jspi"],
+  };
+
   const exp = await instantiate({
     [BROWSER_PROBE_IFACE]: { probe: probeImpl },
+    [ENVIRONMENT_IFACE]: environmentImpls,
   });
-  return exp[BROWSER_REPORT_IFACE]["detect-browser"]();
+  const browser = exp[BROWSER_REPORT_IFACE]["detect-browser"]();
+  const environment = exp[BROWSER_REPORT_IFACE]["detect-environment"]();
+  return { browser, environment };
 }
