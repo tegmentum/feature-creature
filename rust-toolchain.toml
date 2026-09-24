@@ -1,0 +1,18 @@
+# Minimum toolchain the workspace can build under. Bumped from 1.93 to
+# 1.94 for `crates/host-wasmtime`, whose `wasmtime-internal-*` deps at
+# 47.0.2 require it; every other crate in the workspace builds cleanly
+# on 1.75+ but pins to a single toolchain here so contributors get a
+# consistent build without hunting the version.
+#
+# Note: this workspace has a native/wasm target split — `host-wasmtime`
+# is checked with the default target (aarch64/x86_64 native), while the
+# `*-detector*` crates target `wasm32-unknown-unknown`. There is no
+# single `cargo check --workspace` command that covers both; the CI
+# workflows and README document the two-command pattern:
+#
+#     cargo check --workspace --exclude host-wasmtime \
+#         --target wasm32-unknown-unknown
+#     cargo check -p host-wasmtime
+[toolchain]
+channel = "1.94"
+targets = ["wasm32-unknown-unknown"]
