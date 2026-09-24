@@ -49,12 +49,21 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
     expect(env, `env.${key}`).toHaveProperty(key);
     expect(typeof env[key], `typeof env.${key}`).toBe("boolean");
   }
-  // Every Playwright browser exposes `WebAssembly.compileStreaming`.
-  // `shared-memory` needs cross-origin isolation (COOP+COEP), which
-  // Python's http.server does not send, so it may read false here even
-  // on browsers that ship SharedArrayBuffer — the discipline check
-  // above (all fields present, all boolean) is the load-bearing part.
-  expect(env["streaming-compilation"]).toBe(true);
+  // With cross-origin isolation enabled (the Node server serves COOP
+  // + COEP + CORP headers on every response), every environment probe
+  // resolves true across Chromium, Firefox, and WebKit under the
+  // Playwright ships they were installed with. If a future browser
+  // release drops one of these, the assertion is where that shows up.
+  for (const key of [
+    "shared-memory",
+    "shared-memory-transferable",
+    "bigint-integration",
+    "js-string-builtins",
+    "streaming-compilation",
+    "jspi",
+  ]) {
+    expect(env[key], `env.${key}`).toBe(true);
+  }
 
   // Tri-state discipline: every state is one of the three arms.
   const states = new Set(browser.map((r) => r.state));

@@ -344,6 +344,27 @@ pnpm run install-browsers   # one-time — downloads the three engines
 pnpm test
 ```
 
+The suite serves `_site/` through `serve-with-isolation.mjs`, a small
+Node server that sends `Cross-Origin-Opener-Policy: same-origin` +
+`Cross-Origin-Embedder-Policy: require-corp` — under cross-origin
+isolation every environment probe (SharedArrayBuffer, its transfer,
+JSPI, JS String Builtins, BigInt-i64, streaming compilation) resolves
+`true` on all three engines, and the test asserts that as the baseline.
+A future browser release dropping one of the six shows up here.
+
+### Sync checks
+
+Two hand-maintained twin tables need to stay in step: the
+`BUILTIN_PROBES` map in `web/js/browser-report.js` (this repo, Pages
+demo) and its sibling in
+`packages/feature-creature-browser/src/builtin-probes.ts` in the
+WasmOS monorepo (`@wasmos/feature-creature-browser`). Run
+`node scripts/check-builtin-probes-sync.mjs` locally before pushing —
+looks up vela via `$VELA_ROOT` (default `../wasmos/vela-wasm`),
+diffs the covered `browser:*` package sets, and fails on any drift.
+Skips cleanly (exit 0) when vela isn't checked out, so it's safe to
+wire into pre-push hooks.
+
 ## Running as a component
 
 The same probe set is also packaged as a WebAssembly component that

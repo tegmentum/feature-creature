@@ -17,7 +17,12 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: `python3 -m http.server ${PORT} --directory _site`,
+    // Custom Node server sends Cross-Origin-Opener-Policy: same-origin
+    // + Cross-Origin-Embedder-Policy: require-corp so browsers enable
+    // cross-origin isolation — required for SharedArrayBuffer transfer
+    // via postMessage structured clone (`shared-memory-transferable`).
+    // Python's http.server sends neither.
+    command: `node serve-with-isolation.mjs ${PORT} _site`,
     url: `${BASE_URL}/index.html`,
     reuseExistingServer: true,
     stdout: "ignore",
