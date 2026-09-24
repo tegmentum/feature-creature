@@ -127,6 +127,48 @@ test("browser-detector produces a full 53-entry tri-state report", async ({
     expect(["available", "browser-missing"]).toContain(sub("introspection"));
   }
 
+  // Sub-feature taxonomies beyond WebGPU. Each of these four packages
+  // has documented layers in `browser-subfeatures.toml`; each browser's
+  // sub-feature answer should also be tri-state disciplined.
+  for (const pkg of [
+    "browser:service-worker",
+    "browser:worker",
+    "browser:storage",
+    "browser:webauthn",
+  ]) {
+    const r = byPkg[pkg];
+    expect(r.subfeatures.length, `${pkg}.subfeatures`).toBeGreaterThan(0);
+    for (const s of r.subfeatures) {
+      expect(
+        ["available", "browser-missing", "shim-missing"],
+        `${pkg}.${s.name}`,
+      ).toContain(s.state);
+    }
+  }
+
+  // Real browser discrimination — Chromium ships Background Sync +
+  // Periodic Sync alongside the base ServiceWorker; Firefox and WebKit
+  // ship only base + Push. If a future engine flips one of those,
+  // this is where the change surfaces.
+  const swSub = (name: string) =>
+    byPkg["browser:service-worker"].subfeatures.find((s) => s.name === name)
+      ?.state;
+  if (browserName === "chromium") {
+    expect(swSub("sync")).toBe("available");
+    expect(swSub("periodic-sync")).toBe("available");
+  } else {
+    expect(swSub("sync")).toBe("browser-missing");
+    expect(swSub("periodic-sync")).toBe("browser-missing");
+  }
+  // Push, base, and dedicated Worker are universal on every current
+  // shipping engine.
+  expect(swSub("basic")).toBe("available");
+  expect(swSub("push")).toBe("available");
+  expect(
+    byPkg["browser:worker"].subfeatures.find((s) => s.name === "dedicated")
+      ?.state,
+  ).toBe("available");
+
   // Compact per-browser summary — becomes a stable diff surface across
   // Playwright versions as new APIs ship.
   const summary = browser.reduce<Record<string, number>>((acc, r) => {

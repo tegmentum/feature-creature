@@ -170,13 +170,121 @@ const BUILTIN_PROBES = {
 };
 
 // -------------------------------------------------------------------
+// Sub-feature-aware presence probes. Packages whose sub-feature
+// taxonomy is documented in `browser-subfeatures.toml` need richer
+// answers than the boolean BUILTIN_PROBES table above — each returns
+// { state, subfeatures } where subfeatures is a per-layer state map
+// mirroring the catalog. If the whole package is browser-missing,
+// every sub-feature also reports browser-missing (rather than being
+// omitted and letting the guest synthesise shim-missing, which would
+// mis-attribute the gap to shim coverage).
+// -------------------------------------------------------------------
+function forAllSub(names, state) {
+  const out = {};
+  for (const n of names) out[n] = state;
+  return out;
+}
+
+function probeServiceWorker() {
+  const names = ["basic", "sync", "periodic-sync", "push"];
+  const nav = g.navigator;
+  if (!nav?.serviceWorker) {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  const swrp = g.ServiceWorkerRegistration?.prototype;
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      sync: swrp && "sync" in swrp ? "available" : "browser-missing",
+      "periodic-sync": swrp && "periodicSync" in swrp ? "available" : "browser-missing",
+      push: swrp && "pushManager" in swrp ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeWorker() {
+  const names = ["dedicated", "shared", "module"];
+  const hasDedicated = typeof g.Worker === "function";
+  if (!hasDedicated) {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      dedicated: "available",
+      shared: typeof g.SharedWorker === "function" ? "available" : "browser-missing",
+      // Module workers can't be detected without actually instantiating
+      // one — every modern engine that ships Worker also supports the
+      // `{ type: 'module' }` option, so we report available when Worker
+      // itself is available. If a caller wants ground-truth, they can
+      // instantiate a real module worker and observe the pass.
+      module: "available",
+    },
+  };
+}
+
+function probeStorage() {
+  const names = ["basic", "estimate", "persist", "directory"];
+  const nav = g.navigator;
+  const s = nav?.storage;
+  if (!s) {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      estimate: typeof s.estimate === "function" ? "available" : "browser-missing",
+      persist: typeof s.persist === "function" ? "available" : "browser-missing",
+      directory: typeof s.getDirectory === "function" ? "available" : "browser-missing",
+    },
+  };
+}
+
+function probeWebauthn() {
+  const names = ["basic", "conditional-mediation", "platform-auth", "client-capabilities"];
+  const PKC = g.PublicKeyCredential;
+  if (typeof PKC === "undefined") {
+    return { state: "browser-missing", subfeatures: forAllSub(names, "browser-missing") };
+  }
+  return {
+    state: "available",
+    subfeatures: {
+      basic: "available",
+      "conditional-mediation":
+        typeof PKC.isConditionalMediationAvailable === "function"
+          ? "available"
+          : "browser-missing",
+      "platform-auth":
+        typeof PKC.isUserVerifyingPlatformAuthenticatorAvailable === "function"
+          ? "available"
+          : "browser-missing",
+      "client-capabilities":
+        typeof PKC.getClientCapabilities === "function"
+          ? "available"
+          : "browser-missing",
+    },
+  };
+}
+
+const SUBFEATURE_PROBES = {
+  "browser:webgpu@0.9.0": probeWebgpu,
+  "browser:service-worker": probeServiceWorker,
+  "browser:worker": probeWorker,
+  "browser:storage": probeStorage,
+  "browser:webauthn": probeWebauthn,
+};
+
+// -------------------------------------------------------------------
 // The `browser-probe` interface implementation the wasm guest calls once
 // per catalog entry. Unknown packages return `shim-missing`; that's the
 // right signal for a WIT surface we don't have a check for yet.
 // -------------------------------------------------------------------
 function probeImpl(pkg) {
-  if (pkg === "browser:webgpu@0.9.0") {
-    const r = probeWebgpu();
+  const rich = SUBFEATURE_PROBES[pkg];
+  if (rich) {
+    const r = rich();
     const subfeatures = r.subfeatures
       ? Object.entries(r.subfeatures).map(([name, state]) => ({ name, state }))
       : [];

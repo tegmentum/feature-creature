@@ -48,15 +48,38 @@ if (!existsSync(velaProbesPath)) {
   process.exit(0);
 }
 
-// Same regex works on both files — the .js and .ts variants both use
-// `"browser:X": ...` entries inside a table literal.
+// Scope the key extraction to the BUILTIN_PROBES table literal
+// specifically. Both files also have SUBFEATURE_PROBES tables using
+// the same `"browser:X":` shape for packages we deliberately author
+// rich per-layer probes for inline — those are intentional per-side
+// choices (feature-creature bundles the WebGPU probe; vela expects the
+// caller to register the @tegmentum/browser-webgpu-js shim) and don't
+// belong in the presence-only sync check.
 const KEY_RE = /"(browser:[^"]+)"\s*:/g;
+const TABLE_RES = [
+  // JS: `const BUILTIN_PROBES = { ... };`
+  /const\s+BUILTIN_PROBES\s*=\s*{([\s\S]*?)^};/m,
+  // TS: `export const BUILTIN_PROBES: Record<...> = { ... };`
+  /export\s+const\s+BUILTIN_PROBES\s*:\s*[^=]+=\s*{([\s\S]*?)^};/m,
+];
 
 function extractKeys(path) {
   const src = readFileSync(path, "utf8");
+  let body;
+  for (const re of TABLE_RES) {
+    const m = src.match(re);
+    if (m) {
+      body = m[1];
+      break;
+    }
+  }
+  if (!body) {
+    console.error(`no BUILTIN_PROBES table found in ${path}`);
+    process.exit(2);
+  }
   const keys = new Set();
   let m;
-  while ((m = KEY_RE.exec(src)) !== null) keys.add(m[1]);
+  while ((m = KEY_RE.exec(body)) !== null) keys.add(m[1]);
   return keys;
 }
 

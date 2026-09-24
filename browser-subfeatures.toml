@@ -14,6 +14,71 @@
 # is reported to the loader as an unknown-subfeature warning (the
 # taxonomy needs updating).
 
+# browser:service-worker — spec sub-capabilities. Background Sync,
+# Periodic Sync, and Push are separate APIs bolted onto ServiceWorker;
+# browsers ship them independently. Chromium ships all four today;
+# Firefox and Safari ship the base + `push` but not the two sync APIs.
+[[subfeature-set]]
+package = "browser:service-worker"
+names = [
+    # Base ServiceWorker registration + lifecycle.
+    "basic",
+    # Background Sync API — `registration.sync.register`.
+    "sync",
+    # Periodic Background Sync — `registration.periodicSync.register`.
+    "periodic-sync",
+    # Push API — `registration.pushManager.subscribe`.
+    "push",
+]
+
+# browser:worker — three flavours of Worker constructor. Dedicated
+# Worker is universal, SharedWorker is missing on Safari (Playwright
+# WebKit ships it now but historically not), module workers (built via
+# `new Worker(url, { type: 'module' })`) are universal on modern
+# browsers.
+[[subfeature-set]]
+package = "browser:worker"
+names = [
+    # Base `Worker` constructor.
+    "dedicated",
+    # `SharedWorker` constructor.
+    "shared",
+    # ES module workers — `new Worker(url, { type: 'module' })`.
+    "module",
+]
+
+# browser:storage — the four tiers of the modern StorageManager API.
+# `navigator.storage` is universally available; `estimate`, `persist`,
+# and OPFS `getDirectory` came in later spec versions and browsers
+# ship them independently.
+[[subfeature-set]]
+package = "browser:storage"
+names = [
+    # `navigator.storage` presence.
+    "basic",
+    # `navigator.storage.estimate()`.
+    "estimate",
+    # `navigator.storage.persist()`.
+    "persist",
+    # Origin Private File System — `navigator.storage.getDirectory()`.
+    "directory",
+]
+
+# browser:webauthn — spec tiers that ship independently across browsers.
+[[subfeature-set]]
+package = "browser:webauthn"
+names = [
+    # `PublicKeyCredential` + `navigator.credentials.get`/`create`.
+    "basic",
+    # Conditional mediation — `PublicKeyCredential.isConditionalMediationAvailable`.
+    "conditional-mediation",
+    # Platform authenticator (Touch ID, Windows Hello, etc.).
+    "platform-auth",
+    # `PublicKeyCredential.getClientCapabilities()` — very recent
+    # addition, ships incrementally across browsers.
+    "client-capabilities",
+]
+
 # browser:webgpu — progressive layers documented at the top of
 # `wit/deps/browser-webgpu/webgpu.wit` in the WasmOS repo.
 [[subfeature-set]]

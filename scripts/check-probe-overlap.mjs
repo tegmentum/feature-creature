@@ -33,19 +33,25 @@ const SHIM_PROBES = [
 const reportPath = resolve(repoRoot, "web/js/browser-report.js");
 const reportSrc = readFileSync(reportPath, "utf8");
 
-// Pull the `browser:*` keys out of the BUILTIN_PROBES table. The table
-// literal spans many lines, one entry per line, so the per-line regex
-// is enough — no need to actually parse JS.
+// Extract the BUILTIN_PROBES table literal specifically. The
+// SUBFEATURE_PROBES table in the same file also uses `"browser:X":`
+// keys but represents rich per-layer probes that are DELIBERATELY
+// authored inline — those are not "presence-only fallback" and don't
+// conflict with shim availability.
+const TABLE_RE = /const\s+BUILTIN_PROBES\s*=\s*{([\s\S]*?)^};/m;
+const tableMatch = reportSrc.match(TABLE_RE);
+if (!tableMatch) {
+  console.error("no BUILTIN_PROBES table found in web/js/browser-report.js");
+  process.exit(2);
+}
+const tableBody = tableMatch[1];
+
 const KEY_RE = /"(browser:[^"]+)"\s*:/g;
 const builtinKeys = new Set();
 let match;
-while ((match = KEY_RE.exec(reportSrc)) !== null) {
+while ((match = KEY_RE.exec(tableBody)) !== null) {
   builtinKeys.add(match[1]);
 }
-
-// Filter to keys that appear inside the BUILTIN_PROBES literal; the
-// same regex would also match the switch in probeImpl(), which is
-// fine — a package is a conflict iff there's a builtin entry AT ALL.
 
 const conflicts = SHIM_PROBES.filter((s) => builtinKeys.has(s.witPackage));
 
